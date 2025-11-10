@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+
+*.stl
+*.obj
+*.ipynb
+*.nrrd
