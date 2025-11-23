@@ -1,0 +1,3 @@
+[submodule "edge_mender/Dual_Contouring_Voxel"]
+	path = edge_mender/Dual_Contouring_Voxel
+	url = https://github.com/Kryolyz/Dual_Contouring_Voxel.git
