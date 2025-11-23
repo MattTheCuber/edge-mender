@@ -86,18 +86,12 @@ class GeometryHelper:
         return np.arccos(dot)
 
     @staticmethod
-    def is_left(
-        line_point: NDArray,
-        direction: NDArray,
-        test_point: NDArray,
-    ) -> bool:
-        print(
-            f"Testing if point {test_point} is left of line at {line_point} with direction {direction}"
-        )
+    def is_left(line_point: NDArray, direction: NDArray, test_point: NDArray) -> bool:
         vx, vy = test_point[0] - line_point[0], test_point[1] - line_point[1]
         cross = direction[0] * vy - direction[1] * vx
         if cross == 0:
-            raise ValueError("Point is on the line")
+            msg = "Point is on the line"
+            raise ValueError(msg)
         return cross > 0
 
     @staticmethod
@@ -115,8 +109,10 @@ class GeometryHelper:
         det = np.linalg.det(A)
         if abs(det) < tol:
             if np.linalg.norm(np.cross(np.append(normal_1, 0), np.append(b, 0))) < tol:
-                raise ValueError("Colinear")
-            raise ValueError("Parallel")
+                msg = "Colinear"
+                raise ValueError(msg)
+            msg = "Parallel"
+            raise ValueError(msg)
 
         t, s = np.linalg.solve(A, b)
         return t >= -tol and s >= -tol

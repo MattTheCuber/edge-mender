@@ -1,17 +1,25 @@
 """Provides the class for repairing non-manifold edges in voxel boundary meshes."""
 
+import logging
+
 import numpy as np
 import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
 
+logging.basicConfig(format="%(message)s")
+
+NON_MANIFOLD_EDGE_FACE_COUNT = 4
+
 
 class EdgeMender:
     """The class for repairing non-manifold edges in voxel boundary meshes."""
 
-    def __init__(self, mesh: trimesh.Trimesh) -> None:
+    def __init__(self, mesh: trimesh.Trimesh, *, debug: bool = False) -> None:
         self.mesh = mesh
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
 
     def _get_split_rays_via_grouping(
         self,
@@ -25,32 +33,55 @@ class EdgeMender:
         line_direction_1 = [1, 1, 1] - np.abs(edge_direction)
         line_direction_2 = line_direction_1.copy()
         line_direction_2[np.argmax(line_direction_2)] = -1
-        print(f"Line directions: {line_direction_1} and {line_direction_2}")
+        self.logger.debug(
+            "Line directions: %s and %s",
+            line_direction_1,
+            line_direction_2,
+        )
 
         edge_face_centers = self._get_face_centers(edge_face_indices)
-        print(f"Edge face centers: {edge_face_centers}")
+        self.logger.debug("Edge face centers: %s", edge_face_centers)
 
         group_1_centers = []
         group_2_centers = []
         group_1_faces = []
         group_2_faces = []
-        for center, face_index in zip(edge_face_centers, edge_face_indices):
+        for center, face_index in zip(
+            edge_face_centers,
+            edge_face_indices,
+            strict=True,
+        ):
+            self.logger.debug(
+                "Testing if point %s is left of line at %s with direction %s",
+                center[i],
+                edge_points[0][i],
+                line_direction_1[i],
+            )
             if GeometryHelper.is_left(
-                edge_points[0][i], line_direction_1[i], center[i]
+                edge_points[0][i],
+                line_direction_1[i],
+                center[i],
             ):
                 group_1_centers.append(center)
                 group_1_faces.append(face_index)
             else:
                 group_2_centers.append(center)
                 group_2_faces.append(face_index)
-        print(
-            f"Group 1 has faces {group_1_faces} with centers {group_1_centers}, Group 2 has faces {group_2_faces} with centers {group_2_centers}"
+        self.logger.debug(
+            "Group 1 has faces %s with centers %s, "
+            "Group 2 has faces %s with centers %s",
+            group_1_faces,
+            group_1_centers,
+            group_2_faces,
+            group_2_centers,
         )
 
         group_1_normals = self.mesh.face_normals[np.array(group_1_faces)]
         group_2_normals = self.mesh.face_normals[np.array(group_2_faces)]
-        print(
-            f"Group 1 has normals {list(group_1_normals)}, Group 2 has normals {list(group_2_normals)}"
+        self.logger.debug(
+            "Group 1 has normals %s, Group 2 has normals %s",
+            list(group_1_normals),
+            list(group_2_normals),
         )
 
         groups_intersect = GeometryHelper.rays_intersect(
@@ -59,12 +90,12 @@ class EdgeMender:
             point_2=group_1_centers[1][i],
             normal_2=group_1_normals[1][i],
         )
-        print(f"Groups intersect? {groups_intersect}")
-        print(f"Groups correct? {not groups_intersect}")
+        self.logger.debug("Groups intersect? %s", groups_intersect)
+        self.logger.debug("Groups correct? %s", not groups_intersect)
 
         ray_1 = line_direction_1 if groups_intersect else line_direction_2
         ray_2 = ray_1 * -1
-        print(f"Ray directions: {ray_1} and {ray_2}")
+        self.logger.debug("Ray directions: %s and %s", ray_1, ray_2)
 
         return ray_1, ray_2
 
@@ -73,11 +104,12 @@ class EdgeMender:
         *,
         move_distance: float = 0.0,  # should be less than 25% of the voxel size
         skip_edges: list[int] | None = None,
+        only_edges: list[int] | None = None,
     ) -> tuple[list[int], list[int], list[list[int]]]:
         non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
             self.find_non_manifold_edges()
         )
-        print(f"Found {len(non_manifold_edges)} non-manifold edges\n")
+        self.logger.debug("Found %d non-manifold edges\n", len(non_manifold_edges))
 
         # Track vertices to move and the amount + direction to move them
         move_vertices: dict[int, NDArray] = {}
@@ -88,28 +120,56 @@ class EdgeMender:
         new_vertices = []
 
         for original_edge_faces, edge_vertex_indices, edge in zip(
-            non_manifold_faces, non_manifold_vertices, non_manifold_edges, strict=True
+            non_manifold_faces,
+            non_manifold_vertices,
+            non_manifold_edges,
+            strict=True,
         ):
             if skip_edges and edge in skip_edges:
-                print(f"Skipping edge {edge} as requested")
+                self.logger.debug("Skipping edge %d as requested", edge)
                 continue
-            print(f"Processing edge {edge}")
+            if only_edges and edge not in only_edges:
+                self.logger.debug("Skipping edge %d as requested", edge)
+                continue
+            self.logger.debug("Processing edge %d", edge)
 
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
-            print(
-                f"Edge {edge} connects vertices {edge_vertex_indices} at {points[0]} and {points[1]}"
+            self.logger.debug(
+                "Edge %d connects vertices %s at %s and %s",
+                edge,
+                edge_vertex_indices,
+                points[0],
+                points[1],
             )
 
-            current_edge_faces = self._get_faces_at_edges(edge_vertex_indices)
-            print(f"Edge {edge} was shared by faces {original_edge_faces}")
-            print(f"Edge {edge} is now shared by faces {current_edge_faces}")
+            current_edge_faces = self._get_faces_at_edge(edge_vertex_indices)
+            self.logger.debug(
+                "Edge %d was shared by faces %s",
+                edge,
+                original_edge_faces,
+            )
+            self.logger.debug(
+                "Edge %d is now shared by faces %s",
+                edge,
+                current_edge_faces,
+            )
 
-            for point, edge_vertex_index in zip(points, edge_vertex_indices):
-                print(f"Processing vertex {edge_vertex_index} at {point}")
+            for point, edge_vertex_index in zip(
+                points,
+                edge_vertex_indices,
+                strict=True,
+            ):
+                self.logger.debug(
+                    "Processing vertex %d at %s",
+                    edge_vertex_index,
+                    point,
+                )
                 if edge_vertex_index in split_vertices:
-                    print(
-                        f"Skipping already handled vertex {edge_vertex_index} at {point}"
+                    self.logger.debug(
+                        "Skipping already handled vertex %d at %s",
+                        edge_vertex_index,
+                        point,
                     )
                     continue
 
@@ -119,13 +179,15 @@ class EdgeMender:
                     if edge_vertex_index == edge_vertex_indices[0]
                     else points[0] - points[1]
                 )
-                print(f"Edge direction: {edge_direction}")
+                self.logger.debug("Edge direction: %s", edge_direction)
 
                 # No floor
                 if not self._has_normals_matching_edge(
-                    edge_vertex_index, point, edge_direction
+                    edge_vertex_index,
+                    point,
+                    edge_direction,
                 ):
-                    print("No floor detected")
+                    self.logger.debug("No floor detected")
 
                     other_edge_vertex_index = (
                         edge_vertex_indices[1]
@@ -133,11 +195,21 @@ class EdgeMender:
                         else edge_vertex_indices[0]
                     )
                     other_point = points[1] if point is points[0] else points[0]
-                    print(f"Splitting vertex {edge_vertex_index} at {point}")
-                    print(f"Other vertex {other_edge_vertex_index} at {other_point}")
+                    self.logger.debug(
+                        "Splitting vertex %d at %s",
+                        edge_vertex_index,
+                        point,
+                    )
+                    self.logger.debug(
+                        "Other vertex %d at %s",
+                        other_edge_vertex_index,
+                        other_point,
+                    )
 
                     ray_1, ray_2 = self._get_split_rays_via_grouping(
-                        edge_direction, original_edge_faces, points
+                        edge_direction,
+                        original_edge_faces,
+                        points,
                     )
 
                     new_point, new_vertex = self._split_point(point, edge_vertex_index)
@@ -151,10 +223,12 @@ class EdgeMender:
 
                     faces_to_reconnect = self._get_faces_at_vertex(edge_vertex_index)
                     faces_to_reconnect_centers = self._get_face_centers(
-                        faces_to_reconnect
+                        faces_to_reconnect,
                     )
                     for face_index, face_center in zip(
-                        faces_to_reconnect, faces_to_reconnect_centers
+                        faces_to_reconnect,
+                        faces_to_reconnect_centers,
+                        strict=True,
                     ):
                         self._reassign_face(
                             face_index,
@@ -169,21 +243,23 @@ class EdgeMender:
 
                     split_vertices.add(edge_vertex_index)
                 else:
-                    print("Floor detected, skipping vertex split")
+                    self.logger.debug("Floor detected, skipping vertex split")
 
             # Floor and ceiling case
             if (
                 edge_vertex_indices[0] not in split_vertices
                 and edge_vertex_indices[1] not in split_vertices
             ):
-                print("No vertices split, floor and ceiling case")
+                self.logger.debug("No vertices split, floor and ceiling case")
 
                 ray_1, ray_2 = self._get_split_rays_via_grouping(
-                    edge_direction, original_edge_faces, points
+                    edge_direction,
+                    original_edge_faces,
+                    points,
                 )
 
                 new_point_0, new_vertex_0, new_point_1, new_vertex_1 = self._split_edge(
-                    points
+                    points,
                 )
                 new_vertices.append(new_vertex_0)
                 new_vertices.append(new_vertex_1)
@@ -194,7 +270,9 @@ class EdgeMender:
                 faces_to_reconnect = np.array(list(current_edge_faces))
                 faces_to_reconnect_centers = self._get_face_centers(faces_to_reconnect)
                 for face_index, face_center in zip(
-                    faces_to_reconnect, faces_to_reconnect_centers
+                    faces_to_reconnect,
+                    faces_to_reconnect_centers,
+                    strict=True,
                 ):
                     new_face_index = self._split_face(
                         edge_vertex_indices,
@@ -209,12 +287,15 @@ class EdgeMender:
                     new_faces.append(face_index)
                     new_faces.append(new_face_index)
 
-            print()
+            self.logger.debug("")
 
         # Move after splitting since movements will make normals that aren't orthogonal
         for vertex_to_move, new_point in move_vertices.items():
-            print(
-                f"Moving vertex {vertex_to_move} from {self.mesh.vertices[vertex_to_move]} to {new_point}"
+            self.logger.debug(
+                "Moving vertex %d from %s to %s",
+                vertex_to_move,
+                self.mesh.vertices[vertex_to_move],
+                new_point,
             )
             self.mesh.vertices[vertex_to_move] = new_point
 
@@ -226,33 +307,51 @@ class EdgeMender:
 
     def find_non_manifold_edges(self) -> tuple[NDArray, NDArray, NDArray]:
         unique_edges, counts = np.unique(
-            self.mesh.faces_unique_edges.flatten(), return_counts=True
+            self.mesh.faces_unique_edges.flatten(),
+            return_counts=True,
         )
-        edges = unique_edges[counts == 4]
+        edges = unique_edges[counts == NON_MANIFOLD_EDGE_FACE_COUNT]
         vertices = self.mesh.edges_unique[edges]
 
-        distance_check, edge_index = self.mesh.edges_sorted_tree.query(vertices, k=4)
+        distance_check, edge_index = self.mesh.edges_sorted_tree.query(
+            vertices, k=NON_MANIFOLD_EDGE_FACE_COUNT
+        )
         if np.any(distance_check):
-            raise ValueError("Problem with edge face lookup")
+            msg = "Problem with edge face lookup"
+            raise ValueError(msg)
         faces = edge_index // 3
 
         return faces, vertices, edges
 
-    def _get_faces_at_edges(self, edge_vertices: NDArray) -> NDArray:
-        distance_check, edge_index = self.mesh.edges_sorted_tree.query(
-            edge_vertices, k=4
-        )
-        return edge_index[distance_check == 0] // 3
+    def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
+        # distance_check, edge_index = self.mesh.edges_sorted_tree.query(
+        #     edge_vertices,
+        #     k=NON_MANIFOLD_EDGE_FACE_COUNT,
+        # )
+        # return edge_index[distance_check == 0] // 3
+        return self.mesh.edges_face[
+            np.concatenate(
+                (
+                    np.where(
+                        (self.mesh.edges[:, 0] == edge_vertices[0])
+                        & (self.mesh.edges[:, 1] == edge_vertices[1]),
+                    )[0],
+                    np.where(
+                        (self.mesh.edges[:, 0] == edge_vertices[1])
+                        & (self.mesh.edges[:, 1] == edge_vertices[0]),
+                    )[0],
+                ),
+            )
+        ]
 
     def _get_faces_at_vertex(self, vertex: int) -> NDArray:
         # Get connected faces
         faces = self.mesh.vertex_faces[vertex]
-        faces = faces[faces != -1]  # remove padding (-1 entries)
-        return faces
+        return faces[faces != -1]  # remove padding (-1 entries)
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
         return np.array(
-            np.mean(self.mesh.vertices[self.mesh.faces[face_indices]], axis=1)
+            np.mean(self.mesh.vertices[self.mesh.faces[face_indices]], axis=1),
         )
 
     def _get_split_direction_rays(
@@ -262,25 +361,38 @@ class EdgeMender:
     ) -> tuple[NDArray, NDArray]:
         # Find faces at the first vertex of the edge
         faces1 = self._get_faces_at_vertex(edge[0])
-        print(
-            f"Vertex {edge[0]} at {points[0]} is connected to {len(faces1)} faces: {faces1}"
+        self.logger.debug(
+            "Vertex %d at %s is connected to %d faces: %s",
+            edge[0],
+            points[0],
+            len(faces1),
+            faces1,
         )
 
         # Find faces at the second vertex of the edge
         faces2 = self._get_faces_at_vertex(edge[1])
-        print(
-            f"Vertex {edge[1]} at {points[1]} is connected to {len(faces2)} faces: {faces2}"
+        self.logger.debug(
+            "Vertex %d at %s is connected to %d faces: %s",
+            edge[1],
+            points[1],
+            len(faces2),
+            faces2,
         )
 
         # Find all faces connected to the edge
         all_faces = np.unique(np.concatenate([faces1, faces2]))
-        print(f"Edge {edge} is connected to {len(all_faces)} faces: {all_faces}")
+        self.logger.debug(
+            "Edge %s is connected to %d faces: %s",
+            edge,
+            len(all_faces),
+            all_faces,
+        )
 
         # Find all normals for the connected faces
         all_normals = self.mesh.face_normals[all_faces]
         unique_normals = np.unique(all_normals, axis=0)
         direction = unique_normals.sum(axis=0)
-        print(f"Edge {edge} has normals sum: {direction}")
+        self.logger.debug("Edge %s has normals sum: %s", edge, direction)
 
         return direction, unique_normals
 
@@ -292,19 +404,27 @@ class EdgeMender:
     ) -> bool:
         # Find faces at the vertex
         faces = self._get_faces_at_vertex(edge_vertex_index)
-        print(
-            f"Vertex {edge_vertex_index} at {point} is connected to {len(faces)} faces: {faces}"
+        self.logger.debug(
+            "Vertex %d at %s is connected to %d faces: %s",
+            edge_vertex_index,
+            point,
+            len(faces),
+            faces,
         )
 
         # Find all normals for the connected faces
         all_normals = self.mesh.face_normals[faces]
-        print(
-            f"Vertex {edge_vertex_index} faces have the following normals: {all_normals}"
+        self.logger.debug(
+            "Vertex %d faces have the following normals: %s",
+            edge_vertex_index,
+            all_normals,
         )
         colinear_normals = all_normals[np.all(all_normals == edge_direction, axis=1)]
         unique_normals = np.unique(colinear_normals, axis=0)
-        print(
-            f"Vertex {edge_vertex_index} faces have the following unique colinear normals: {unique_normals}"
+        self.logger.debug(
+            "Vertex %d faces have the following unique colinear normals: %s",
+            edge_vertex_index,
+            unique_normals,
         )
 
         # Check if the normals point towards the edge direction
@@ -319,8 +439,12 @@ class EdgeMender:
         new_point = point_to_move.copy()
         self.mesh.vertices = np.vstack([self.mesh.vertices, new_point])
         split_vertex_index_2 = self.mesh.vertices.shape[0] - 1
-        print(
-            f"Split points: {vertex_to_move} at {point_to_move} and {split_vertex_index_2} at {new_point}"
+        self.logger.debug(
+            "Split points: %d at %s and %d at %s",
+            vertex_to_move,
+            point_to_move,
+            split_vertex_index_2,
+            new_point,
         )
 
         return new_point, split_vertex_index_2
@@ -331,8 +455,12 @@ class EdgeMender:
         self.mesh.vertices = np.vstack([self.mesh.vertices, new_point_0, new_point_1])
         new_vertex_index_0 = self.mesh.vertices.shape[0] - 2
         new_vertex_index_1 = self.mesh.vertices.shape[0] - 1
-        print(
-            f"Split edge producing 2 points: {new_vertex_index_0} at {new_point_0} and {new_vertex_index_1} at {new_point_1}"
+        self.logger.debug(
+            "Split edge producing 2 points: %d at %s and %d at %s",
+            new_vertex_index_0,
+            new_point_0,
+            new_vertex_index_1,
+            new_point_1,
         )
 
         return new_point_0, new_vertex_index_0, new_point_1, new_vertex_index_1
@@ -350,10 +478,14 @@ class EdgeMender:
     ) -> int:
         face_points = self.mesh.faces[face_index]
         angle_1 = GeometryHelper.angle_between_point_and_ray(
-            face_center, new_point, ray_1
+            face_center,
+            new_point,
+            ray_1,
         )
         angle_2 = GeometryHelper.angle_between_point_and_ray(
-            face_center, new_point, ray_2
+            face_center,
+            new_point,
+            ray_2,
         )
 
         new_face_points = face_points.copy()
@@ -364,9 +496,8 @@ class EdgeMender:
             face_points[face_points == edge[0]] = new_vertex_1
             new_face_points[face_points == edge[1]] = new_vertex_1
         else:
-            raise ValueError(
-                "Angles are the same, this is impossible. Something broke!"
-            )
+            msg = "Angles are the same, this is impossible. Something broke!"
+            raise ValueError(msg)
 
         self.mesh.faces = np.vstack([self.mesh.faces, new_face_points])
 
@@ -384,10 +515,14 @@ class EdgeMender:
     ):
         face_points = self.mesh.faces[face_index]
         angle_1 = GeometryHelper.angle_between_point_and_ray(
-            face_center, new_point, ray_1
+            face_center,
+            new_point,
+            ray_1,
         )
         angle_2 = GeometryHelper.angle_between_point_and_ray(
-            face_center, new_point, ray_2
+            face_center,
+            new_point,
+            ray_2,
         )
 
         if angle_1 < angle_2:
@@ -395,9 +530,11 @@ class EdgeMender:
         elif angle_1 > angle_2:
             pass  # No change
         else:
-            raise ValueError(
-                "Angles are the same, this is impossible. Are any of your face normals inverted?"
+            msg = (
+                "Angles are the same, this is impossible. "
+                "Are any of your face normals inverted?"
             )
+            raise ValueError(msg)
 
     def _get_new_edges(
         self,
@@ -406,6 +543,7 @@ class EdgeMender:
     ) -> NDArray:
         check = np.hstack([non_manifold_vertices.flatten(), new_vertices])
         mask = np.isin(self.mesh.edges_sorted[:, 0], check) & np.isin(
-            self.mesh.edges_sorted[:, 1], check
+            self.mesh.edges_sorted[:, 1],
+            check,
         )
         return self.mesh.edges_sorted[mask]
