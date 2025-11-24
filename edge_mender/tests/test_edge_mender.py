@@ -23,6 +23,7 @@ from edge_mender.mesh_generator import MeshGenerator
         DataFactory.hanging_points(),
         DataFactory.checkerboard(),
         DataFactory.hole(),
+        DataFactory.kill_you(),
     ],
 )
 def test_validate(data: NDArray, spacing: tuple[float, float, float]) -> None:
@@ -192,7 +193,8 @@ def test_find_non_manifold_edges(
         DataFactory.checkerboard(),
         # TODO: This test case fails due to a bug with SurfaceNets from VTK
         # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
-        # DataFactory.hole(.)
+        # DataFactory.hole(),  # noqa: ERA001
+        DataFactory.kill_you(),
     ],
 )
 def test_repair(data: NDArray) -> None:
