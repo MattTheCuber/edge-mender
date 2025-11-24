@@ -51,7 +51,7 @@ packages = ["edge_mender"]
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = []
+ignore = ["TD002"]
 fixable = ["ALL"]
 unfixable = []
 

@@ -26,7 +26,7 @@ from edge_mender.mesh_generator import MeshGenerator
     ],
 )
 def test_validate(data: NDArray, spacing: tuple[float, float, float]) -> None:
-    """Test that the validate function works for valid meshes."""
+    """Test that the validate function works for the test cases."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mesh.vertices *= spacing
     mender = EdgeMender(mesh)
@@ -171,9 +171,33 @@ def test_find_non_manifold_edges(
     expected_vertices: NDArray | list[list[int]],
     expected_edges: NDArray | list[int],
 ) -> None:
-    """Test that the validate function works for valid meshes."""
+    """Test that the find_non_manifold_edges function works correctly."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     faces, vertices, edges = EdgeMender(mesh).find_non_manifold_edges()
     np.testing.assert_array_equal(faces, expected_faces)
     np.testing.assert_array_equal(vertices, expected_vertices)
     np.testing.assert_array_equal(edges, expected_edges)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        DataFactory.simple_extrusion(),
+        DataFactory.double_extrusion(),
+        DataFactory.triple_extrusion(),
+        DataFactory.stairs(),
+        DataFactory.ceiling(),
+        DataFactory.double_tower_ceiling(),
+        DataFactory.hanging_points(),
+        DataFactory.checkerboard(),
+        # TODO: This test case fails due to a bug with SurfaceNets from VTK
+        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
+        # DataFactory.hole(.)
+    ],
+)
+def test_repair(data: NDArray) -> None:
+    """Test that the repair function works for the test cases."""
+    mesh = MeshGenerator.to_mesh_surface_nets(data)
+    mender = EdgeMender(mesh)
+    mender.repair()
+    assert len(mender.find_non_manifold_edges()[2]) == 0
