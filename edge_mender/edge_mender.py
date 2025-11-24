@@ -1,6 +1,7 @@
 """Provides the class for repairing non-manifold edges in voxel boundary meshes."""
 
 import logging
+import math
 
 import numpy as np
 import trimesh
@@ -39,6 +40,48 @@ class EdgeMender:
         """
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
+
+    def validate(self, *, spacing: tuple[float, float, float]) -> None:
+        """Validate that the mesh is a valid voxel boundary mesh before repair.
+
+        Raises
+        ------
+        ValueError
+            If the mesh has non-axis-aligned face normals.
+        ValueError
+            If the mesh has faces with angles that aren't 90° or 45°
+        ValueError
+            If the mesh has non-uniform face areas.
+        """
+        test_mesh = self.mesh.copy()
+        test_mesh.vertices /= spacing
+
+        # Ensure normals are axis-aligned
+        axes = [-1, 0, 1]
+        non_axis_aligned_count = np.sum(
+            ~np.isin(np.round(test_mesh.face_normals, 8), axes),
+        )
+        if non_axis_aligned_count > 0:
+            msg = (
+                f"WARNING: Mesh has {non_axis_aligned_count} "
+                "non-axis-aligned face normals."
+            )
+            raise ValueError(msg)
+
+        # Ensure all faces have 90° or 45° angles
+        angles_dist = np.abs(
+            test_mesh.face_angles[..., None] - [math.pi / 2, math.pi / 4],
+        ).min(axis=2)
+        bad_angle_faces = np.sum((angles_dist > 1e-8).any(axis=1))  # noqa: PLR2004
+        if bad_angle_faces > 0:
+            msg = f"WARNING: Mesh has {bad_angle_faces} faces with bad angles."
+            raise ValueError(msg)
+
+        # Ensure all faces have the same area
+        unique_areas = len(np.unique(test_mesh.area_faces))
+        if unique_areas > 1:
+            msg = f"WARNING: Mesh has {unique_areas} unique non-uniform face areas."
+            raise ValueError(msg)
 
     def find_non_manifold_edges(self) -> tuple[NDArray, NDArray, NDArray]:
         unique_edges, counts = np.unique(
