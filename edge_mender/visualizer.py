@@ -25,26 +25,61 @@ class Visualizer:
         opacity: float = 1.0,
         style: Literal["points", "wireframe", "surface"] = "surface",
     ) -> pv.Plotter:
+        """Visualize a mesh with optional highlights and labels.
+
+        Parameters
+        ----------
+        input_mesh : trimesh.Trimesh | pv.PolyData
+            The mesh to visualize.
+        highlight_faces : list[int] | None, optional
+            A list of face indices to highlight, by default None
+        highlight_vertices : list[int] | None, optional
+            A list of vertex indices to highlight, by default None
+        highlight_edges : list[list[int]] | None, optional
+            A list of edges to highlight, by default None
+        add_face_normals : bool, optional
+            Whether to add face normal arrows, by default False
+        add_face_labels : bool, optional
+            Whether to add labels to faces, by default False
+        add_vertex_labels : bool, optional
+            Whether to add labels to vertices, by default True
+        add_edge_labels : bool, optional
+            Whether to add labels to edges, by default False
+        edge_labels : list[str | int] | None, optional
+            The labels to use for the edges, by default None
+        opacity : float, optional
+            The opacity of the mesh, by default 1.0
+        style : Literal["points", "wireframe", "surface"], optional
+            The style of the mesh, by default "surface"
+
+        Returns
+        -------
+        pv.Plotter
+            The PyVista plotter object used for visualization.
+        """
         mesh: pv.PolyData = pv.wrap(input_mesh)
         plotter = pv.Plotter()
         plotter.add_mesh(mesh, show_edges=True, style=style, opacity=opacity)
 
         if add_face_normals:
             normals_mesh = mesh.compute_normals(
-                cell_normals=True, point_normals=False, consistent_normals=False
+                cell_normals=True,
+                point_normals=False,
+                consistent_normals=False,
             )
             if highlight_faces:
                 unique_faces = np.unique(highlight_faces)
                 normals_mesh = normals_mesh.extract_cells(unique_faces)
-            plotter.add_mesh(
-                normals_mesh.glyph(orient="Normals", scale=False, factor=0.2),
-                color="#FF5555",
-                point_size=0,
-            )
+            normals_glyphs: pv.PolyData = normals_mesh.glyph(
+                orient="Normals",
+                scale=False,
+                factor=0.2,
+            )  # pyright: ignore[reportAssignmentType]
+            plotter.add_mesh(normals_glyphs, color="#FF5555", point_size=0)
 
         if highlight_faces:
             unique_faces = np.unique(highlight_faces)
-            highlighted_faces = mesh.extract_cells(unique_faces)
+            highlighted_faces: pv.PolyData = mesh.extract_cells(unique_faces)  # pyright: ignore[reportAssignmentType]
             plotter.add_mesh(highlighted_faces, color="lightgreen", show_edges=True)
             if add_face_labels:
                 plotter.add_point_labels(
@@ -67,7 +102,10 @@ class Visualizer:
             if add_vertex_labels:
                 plotter.add_point_labels(
                     hightlight_points,
-                    [f"{v}: {p}" for v, p in zip(unique_vertices, hightlight_points)],
+                    [
+                        f"{v}: {p}"
+                        for v, p in zip(unique_vertices, hightlight_points, strict=True)
+                    ],
                     render_points_as_spheres=True,
                     point_color="#00FFFF",
                     point_size=5,
@@ -92,7 +130,9 @@ class Visualizer:
             unique_edges = np.unique(highlight_edges, axis=1)
             cells = np.hstack([[2, *e] for e in unique_edges])
             edge_mesh = pv.UnstructuredGrid(
-                cells, [pv.CellType.LINE] * len(unique_edges), mesh.points
+                cells,
+                [pv.CellType.LINE] * len(unique_edges),
+                mesh.points,
             )
             plotter.add_mesh(
                 edge_mesh,
