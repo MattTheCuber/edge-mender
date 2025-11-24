@@ -45,3 +45,5 @@ jobs:
         with:
           commit_message: "docs: update coverage badge"
           file_pattern: README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
