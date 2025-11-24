@@ -44,6 +44,12 @@ class EdgeMender:
     def validate(self, *, spacing: tuple[float, float, float]) -> None:
         """Validate that the mesh is a valid voxel boundary mesh before repair.
 
+        Parameters
+        ----------
+        spacing : tuple[float, float, float]
+            The spacing of the mesh in each dimension. This is used to check that the
+            face areas are uniform and that the angles are correct.
+
         Raises
         ------
         ValueError
@@ -83,16 +89,42 @@ class EdgeMender:
             msg = f"WARNING: Mesh has {unique_areas} unique non-uniform face areas."
             raise ValueError(msg)
 
-    def find_non_manifold_edges(self) -> tuple[NDArray, NDArray, NDArray]:
+    def find_non_manifold_edges(
+        self,
+    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.int64]]:
+        """Find non-manifold edges within the mesh.
+
+        Non-manifold edges are defined as edges shared by 4 faces.
+
+        Returns
+        -------
+        non_manifold_faces : NDArray[np.int64]
+            An (n, 4) array of the four face indices for each non-manifold edge.
+        non_manifold_vertices : NDArray[np.int64]
+            An (n, 2) array of the two vertex indices for each non-manifold edge.
+        non_manifold_edges : NDArray[np.int64]
+            An (n,) array of the edge indices for each non-manifold edge.
+
+        Raises
+        ------
+        ValueError
+            If there is a problem with the edge face lookup.
+        """
+        # Find all unique edges and their face counts
         unique_edges, counts = np.unique(
             self.mesh.faces_unique_edges.flatten(),
             return_counts=True,
         )
+        # Find the edges that are shared by 4 faces
         edges = unique_edges[counts == NON_MANIFOLD_EDGE_FACE_COUNT]
+
+        # Get the vertices for each edge
         vertices = self.mesh.edges_unique[edges]
 
+        # Get the faces for each edge
         distance_check, edge_index = self.mesh.edges_sorted_tree.query(
-            vertices, k=NON_MANIFOLD_EDGE_FACE_COUNT
+            vertices,
+            k=NON_MANIFOLD_EDGE_FACE_COUNT,
         )
         if np.any(distance_check):
             msg = "Problem with edge face lookup"
