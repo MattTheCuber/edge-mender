@@ -32,4 +32,4 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run Tests
-        run: pytest
+        run: uv run pytest
