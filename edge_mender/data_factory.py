@@ -229,19 +229,6 @@ class DataFactory:
         return data
 
     @staticmethod
-    def test_case_1() -> NDArray:
-        """`faces_to_flip=[16, 17, 44, 45, 54, 55, 58, 59]`"""
-        data = np.array(
-            [
-                [[0, 0, 1], [0, 1, 1], [0, 1, 1]],
-                [[0, 1, 1], [1, 0, 1], [1, 1, 1]],
-                [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
-            ],
-            dtype=np.uint8,
-        )
-        return np.pad(data, pad_width=1, mode="constant", constant_values=0)
-
-    @staticmethod
     def random(*, size: int = 16, seed: int | None = None) -> NDArray:
         rng = np.random.default_rng(seed)
         data = rng.integers(0, 2, (size, size, size), dtype=np.uint8)

@@ -18,10 +18,11 @@ dependencies = ["numpy>=2.3.4", "trimesh>=4.9.0"]
 test = [
     "connected-components-3d>=3.26.0",
     "fill-voids>=2.1.1",
-    "pyvista>=0.46.3",
+    "pyvista>=0.46.4",
     "nibabel>=5.3.2",
     "scipy>=1.16.3",
     "panda3d>=1.10.15",
+    "manifold3d>=3.3.2",
 ]
 dev = [
     "pytest>=8.4.2",
