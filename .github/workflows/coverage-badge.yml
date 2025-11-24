@@ -10,10 +10,12 @@ jobs:
   update-badge:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           fetch-depth: 0
+          submodules: true
 
       - name: Set up Python
         uses: astral-sh/setup-uv@v7
@@ -26,7 +28,7 @@ jobs:
       - name: Run Tests
         run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml
 
-      - name: Coverage comment
+      - name: Coverage Comment
         id: coverage
         uses: MishaKav/pytest-coverage-comment@v1.2.0
         with:
@@ -38,7 +40,7 @@ jobs:
         run: |
           sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n${{ steps.coverage.outputs.coverageHtml }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
 
-      - name: Commit changes
+      - name: Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "docs: update coverage badge"
