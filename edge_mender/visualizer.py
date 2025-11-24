@@ -1,3 +1,5 @@
+"""Module for visualizing meshes using PyVista."""
+
 from typing import Literal
 
 import numpy as np
@@ -6,6 +8,8 @@ import trimesh
 
 
 class Visualizer:
+    """Class for visualizing meshes using PyVista."""
+
     @staticmethod
     def show_mesh(
         input_mesh: trimesh.Trimesh | pv.PolyData,

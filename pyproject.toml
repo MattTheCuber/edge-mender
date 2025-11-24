@@ -63,4 +63,9 @@ convention = "numpy"
 "*/tests/*" = ["S101"]
 
 [tool.coverage.run]
-omit = ["conftest.py", "pseudocode.py", "edge_mender/Dual_Contouring_Voxel/*"]
+omit = [
+    "conftest.py",
+    "pseudocode.py",
+    "tests/*",
+    "edge_mender/Dual_Contouring_Voxel/*",
+]
