@@ -9,7 +9,8 @@ description = "A Topology Repair Algorithm for Voxel Boundary Meshes"
 authors = [{ name = "Matthew Vine", email = "mattvine03@gmail.com" }]
 keywords = ["mesh", "manifold", "topology", "voxel", "3d", "geometry"]
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.3.4", "trimesh>=4.9.0"]
 
@@ -22,7 +23,13 @@ test = [
     "scipy>=1.16.3",
     "panda3d>=1.10.15",
 ]
-dev = ["pytest>=8.4.2", "ruff>=0.14.1", "uv>=0.9.5", "cython>=3.1.5"]
+dev = [
+    "pytest>=8.4.2",
+    "ruff>=0.14.1",
+    "uv>=0.9.5",
+    "cython>=3.1.5",
+    "pre-commit>=4.5.0",
+]
 debug = [
     "ipykernel>=7.0.1",
     "ipywidgets>=8.1.7",
@@ -37,7 +44,8 @@ debug = [
 ]
 
 [tool.setuptools]
-ext-modules = [{ name = "fastem", sources = ["edge_mender/fast_fixer.pyx"] }]
+packages = ["edge_mender"]
+# ext-modules = [{ name = "fastem", sources = ["edge_mender/fast_fixer.pyx"] }]
 
 [tool.ruff.lint]
 select = ["ALL"]
