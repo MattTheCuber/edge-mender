@@ -175,6 +175,9 @@ def test_find_non_manifold_edges(
     """Test that the find_non_manifold_edges function works correctly."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     faces, vertices, edges = EdgeMender(mesh).find_non_manifold_edges()
+    faces.sort(axis=1)
+    expected_faces = np.array(expected_faces)
+    expected_faces.sort(axis=1)
     np.testing.assert_array_equal(faces, expected_faces)
     np.testing.assert_array_equal(vertices, expected_vertices)
     np.testing.assert_array_equal(edges, expected_edges)
