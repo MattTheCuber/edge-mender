@@ -18,6 +18,25 @@ class EdgeMender:
 
     def __init__(self, mesh: trimesh.Trimesh, *, debug: bool = False) -> None:
         self.mesh = mesh
+        self._face_normals: NDArray[np.float64] | None = None
+        """Return the unit normal vector for each face.
+
+        If a face is degenerate and a normal can't be generated a zero magnitude unit
+        vector will be returned for that face.
+
+        (len(self.faces), 3) float64
+
+        Normal vectors of each face
+        """
+        self._vertex_faces: NDArray[np.int64] | None = None
+        """A representation of the face indices that correspond to each vertex.
+
+        (n,m) int
+
+        Each row contains the face indices that correspond to the given vertex,
+        padded with -1 up to the max number of faces corresponding to any one vertex
+        Where n == len(self.vertices), m == max number of faces for a single vertex.
+        """
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
 
@@ -76,8 +95,8 @@ class EdgeMender:
             group_2_centers,
         )
 
-        group_1_normals = self.mesh.face_normals[np.array(group_1_faces)]
-        group_2_normals = self.mesh.face_normals[np.array(group_2_faces)]
+        group_1_normals = self._face_normals[np.array(group_1_faces)]
+        group_2_normals = self._face_normals[np.array(group_2_faces)]
         self.logger.debug(
             "Group 1 has normals %s, Group 2 has normals %s",
             list(group_1_normals),
@@ -111,6 +130,9 @@ class EdgeMender:
         )
         self.logger.debug("Found %d non-manifold edges\n", len(non_manifold_edges))
 
+        # Cache face normals
+        self._face_normals = self.mesh.face_normals
+
         # Track vertices to move and the amount + direction to move them
         move_vertices: dict[int, NDArray] = {}
         # Track split vertices to avoid double processing
@@ -132,6 +154,10 @@ class EdgeMender:
                 self.logger.debug("Skipping edge %d as requested", edge)
                 continue
             self.logger.debug("Processing edge %d", edge)
+
+            # Cache vertex faces
+            self.mesh._cache.delete("vertex_faces")  # noqa: SLF001
+            self._vertex_faces = self.mesh.vertex_faces
 
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
@@ -284,6 +310,9 @@ class EdgeMender:
                         ray_1,
                         ray_2,
                     )
+                    self._face_normals = np.vstack(
+                        [self._face_normals, self._face_normals[face_index]],
+                    )
                     new_faces.append(face_index)
                     new_faces.append(new_face_index)
 
@@ -346,7 +375,7 @@ class EdgeMender:
 
     def _get_faces_at_vertex(self, vertex: int) -> NDArray:
         # Get connected faces
-        faces = self.mesh.vertex_faces[vertex]
+        faces = self._vertex_faces[vertex]
         return faces[faces != -1]  # remove padding (-1 entries)
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
@@ -389,7 +418,7 @@ class EdgeMender:
         )
 
         # Find all normals for the connected faces
-        all_normals = self.mesh.face_normals[all_faces]
+        all_normals = self._face_normals[all_faces]
         unique_normals = np.unique(all_normals, axis=0)
         direction = unique_normals.sum(axis=0)
         self.logger.debug("Edge %s has normals sum: %s", edge, direction)
@@ -413,7 +442,7 @@ class EdgeMender:
         )
 
         # Find all normals for the connected faces
-        all_normals = self.mesh.face_normals[faces]
+        all_normals = self._face_normals[faces]
         self.logger.debug(
             "Vertex %d faces have the following normals: %s",
             edge_vertex_index,
