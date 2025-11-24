@@ -5,4 +5,5 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Actions status](https://github.com/MattTheCuber/edge-mender/actions/workflows/tests.yml/badge.svg)](https://github.com/MattTheCuber/edge-mender/actions)
 <!-- Pytest Coverage Comment:Begin -->
+
 <!-- Pytest Coverage Comment:End -->
