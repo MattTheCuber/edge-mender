@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  pytest:
+    name: Pytest ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        config:
+          - { name: "Linux", os: ubuntu-latest }
+          - { name: "MacOSX", os: macos-latest }
+          - { name: "Windows", os: windows-latest }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: uv sync --all-extras
+
+      - name: Run Tests
+        run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml
+
+      - name: Pytest Coverage Comment
+        uses: MishaKav/pytest-coverage-comment@v1.2.0
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
+          junitxml-path: ./pytest.xml
+          unique-id-for-comment: ${{ matrix.python-version }}-${{ matrix.config.os }}
+          title: Coverage for Python ${{ matrix.python-version }} on ${{ matrix.config.os }}
+
+      - name: Update README
+        run: |
+          sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n${{ steps.coverage.outputs.coverageHtml }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "docs: update coverage badge"
+          file_pattern: README.md
