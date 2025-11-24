@@ -40,83 +40,23 @@ class EdgeMender:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
 
-    def _get_split_rays_via_grouping(
-        self,
-        edge_direction: NDArray,
-        edge_face_indices: NDArray,
-        edge_points: NDArray,
-    ) -> tuple[NDArray, NDArray]:
-        i = ~edge_direction.astype(bool)
-
-        # Get two orthagonal directions to the edge direction
-        line_direction_1 = [1, 1, 1] - np.abs(edge_direction)
-        line_direction_2 = line_direction_1.copy()
-        line_direction_2[np.argmax(line_direction_2)] = -1
-        self.logger.debug(
-            "Line directions: %s and %s",
-            line_direction_1,
-            line_direction_2,
+    def find_non_manifold_edges(self) -> tuple[NDArray, NDArray, NDArray]:
+        unique_edges, counts = np.unique(
+            self.mesh.faces_unique_edges.flatten(),
+            return_counts=True,
         )
+        edges = unique_edges[counts == NON_MANIFOLD_EDGE_FACE_COUNT]
+        vertices = self.mesh.edges_unique[edges]
 
-        edge_face_centers = self._get_face_centers(edge_face_indices)
-        self.logger.debug("Edge face centers: %s", edge_face_centers)
-
-        group_1_centers = []
-        group_2_centers = []
-        group_1_faces = []
-        group_2_faces = []
-        for center, face_index in zip(
-            edge_face_centers,
-            edge_face_indices,
-            strict=True,
-        ):
-            self.logger.debug(
-                "Testing if point %s is left of line at %s with direction %s",
-                center[i],
-                edge_points[0][i],
-                line_direction_1[i],
-            )
-            if GeometryHelper.is_left(
-                edge_points[0][i],
-                line_direction_1[i],
-                center[i],
-            ):
-                group_1_centers.append(center)
-                group_1_faces.append(face_index)
-            else:
-                group_2_centers.append(center)
-                group_2_faces.append(face_index)
-        self.logger.debug(
-            "Group 1 has faces %s with centers %s, "
-            "Group 2 has faces %s with centers %s",
-            group_1_faces,
-            group_1_centers,
-            group_2_faces,
-            group_2_centers,
+        distance_check, edge_index = self.mesh.edges_sorted_tree.query(
+            vertices, k=NON_MANIFOLD_EDGE_FACE_COUNT
         )
+        if np.any(distance_check):
+            msg = "Problem with edge face lookup"
+            raise ValueError(msg)
+        faces = edge_index // 3
 
-        group_1_normals = self._face_normals[np.array(group_1_faces)]
-        group_2_normals = self._face_normals[np.array(group_2_faces)]
-        self.logger.debug(
-            "Group 1 has normals %s, Group 2 has normals %s",
-            list(group_1_normals),
-            list(group_2_normals),
-        )
-
-        groups_intersect = GeometryHelper.rays_intersect(
-            point_1=group_1_centers[0][i],
-            normal_1=group_1_normals[0][i],
-            point_2=group_1_centers[1][i],
-            normal_2=group_1_normals[1][i],
-        )
-        self.logger.debug("Groups intersect? %s", groups_intersect)
-        self.logger.debug("Groups correct? %s", not groups_intersect)
-
-        ray_1 = line_direction_1 if groups_intersect else line_direction_2
-        ray_2 = ray_1 * -1
-        self.logger.debug("Ray directions: %s and %s", ray_1, ray_2)
-
-        return ray_1, ray_2
+        return faces, vertices, edges
 
     def repair(
         self,
@@ -232,7 +172,7 @@ class EdgeMender:
                         other_point,
                     )
 
-                    ray_1, ray_2 = self._get_split_rays_via_grouping(
+                    ray_1, ray_2 = self._get_split_direction_rays(
                         edge_direction,
                         original_edge_faces,
                         points,
@@ -278,7 +218,7 @@ class EdgeMender:
             ):
                 self.logger.debug("No vertices split, floor and ceiling case")
 
-                ray_1, ray_2 = self._get_split_rays_via_grouping(
+                ray_1, ray_2 = self._get_split_direction_rays(
                     edge_direction,
                     original_edge_faces,
                     points,
@@ -334,30 +274,7 @@ class EdgeMender:
             self._get_new_edges(non_manifold_vertices, new_vertices).tolist(),
         )
 
-    def find_non_manifold_edges(self) -> tuple[NDArray, NDArray, NDArray]:
-        unique_edges, counts = np.unique(
-            self.mesh.faces_unique_edges.flatten(),
-            return_counts=True,
-        )
-        edges = unique_edges[counts == NON_MANIFOLD_EDGE_FACE_COUNT]
-        vertices = self.mesh.edges_unique[edges]
-
-        distance_check, edge_index = self.mesh.edges_sorted_tree.query(
-            vertices, k=NON_MANIFOLD_EDGE_FACE_COUNT
-        )
-        if np.any(distance_check):
-            msg = "Problem with edge face lookup"
-            raise ValueError(msg)
-        faces = edge_index // 3
-
-        return faces, vertices, edges
-
     def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
-        # distance_check, edge_index = self.mesh.edges_sorted_tree.query(
-        #     edge_vertices,
-        #     k=NON_MANIFOLD_EDGE_FACE_COUNT,
-        # )
-        # return edge_index[distance_check == 0] // 3
         return self.mesh.edges_face[
             np.concatenate(
                 (
@@ -382,48 +299,6 @@ class EdgeMender:
         return np.array(
             np.mean(self.mesh.vertices[self.mesh.faces[face_indices]], axis=1),
         )
-
-    def _get_split_direction_rays(
-        self,
-        edge: tuple[int, int],
-        points: NDArray,
-    ) -> tuple[NDArray, NDArray]:
-        # Find faces at the first vertex of the edge
-        faces1 = self._get_faces_at_vertex(edge[0])
-        self.logger.debug(
-            "Vertex %d at %s is connected to %d faces: %s",
-            edge[0],
-            points[0],
-            len(faces1),
-            faces1,
-        )
-
-        # Find faces at the second vertex of the edge
-        faces2 = self._get_faces_at_vertex(edge[1])
-        self.logger.debug(
-            "Vertex %d at %s is connected to %d faces: %s",
-            edge[1],
-            points[1],
-            len(faces2),
-            faces2,
-        )
-
-        # Find all faces connected to the edge
-        all_faces = np.unique(np.concatenate([faces1, faces2]))
-        self.logger.debug(
-            "Edge %s is connected to %d faces: %s",
-            edge,
-            len(all_faces),
-            all_faces,
-        )
-
-        # Find all normals for the connected faces
-        all_normals = self._face_normals[all_faces]
-        unique_normals = np.unique(all_normals, axis=0)
-        direction = unique_normals.sum(axis=0)
-        self.logger.debug("Edge %s has normals sum: %s", edge, direction)
-
-        return direction, unique_normals
 
     def _has_normals_matching_edge(
         self,
@@ -459,6 +334,84 @@ class EdgeMender:
         # Check if the normals point towards the edge direction
         dot = np.dot(unique_normals, edge_direction)
         return np.any(dot == 1).item()
+
+    def _get_split_direction_rays(
+        self,
+        edge_direction: NDArray,
+        edge_face_indices: NDArray,
+        edge_points: NDArray,
+    ) -> tuple[NDArray, NDArray]:
+        i = ~edge_direction.astype(bool)
+
+        # Get two orthagonal directions to the edge direction
+        line_direction_1 = [1, 1, 1] - np.abs(edge_direction)
+        line_direction_2 = line_direction_1.copy()
+        line_direction_2[np.argmax(line_direction_2)] = -1
+        self.logger.debug(
+            "Line directions: %s and %s",
+            line_direction_1,
+            line_direction_2,
+        )
+
+        edge_face_centers = self._get_face_centers(edge_face_indices)
+        self.logger.debug("Edge face centers: %s", edge_face_centers)
+
+        group_1_centers = []
+        group_2_centers = []
+        group_1_faces = []
+        group_2_faces = []
+        for center, face_index in zip(
+            edge_face_centers,
+            edge_face_indices,
+            strict=True,
+        ):
+            self.logger.debug(
+                "Testing if point %s is left of line at %s with direction %s",
+                center[i],
+                edge_points[0][i],
+                line_direction_1[i],
+            )
+            if GeometryHelper.is_left(
+                edge_points[0][i],
+                line_direction_1[i],
+                center[i],
+            ):
+                group_1_centers.append(center)
+                group_1_faces.append(face_index)
+            else:
+                group_2_centers.append(center)
+                group_2_faces.append(face_index)
+        self.logger.debug(
+            "Group 1 has faces %s with centers %s, "
+            "Group 2 has faces %s with centers %s",
+            group_1_faces,
+            group_1_centers,
+            group_2_faces,
+            group_2_centers,
+        )
+
+        group_1_normals = self._face_normals[np.array(group_1_faces)]
+        group_2_normals = self._face_normals[np.array(group_2_faces)]
+        self.logger.debug(
+            "Group 1 has normals %s, Group 2 has normals %s",
+            list(group_1_normals),
+            list(group_2_normals),
+        )
+
+        groups_intersect = GeometryHelper.rays_intersect(
+            point_1=group_1_centers[0][i],
+            normal_1=group_1_normals[0][i],
+            point_2=group_1_centers[1][i],
+            normal_2=group_1_normals[1][i],
+        )
+        self.logger.debug("Groups intersect? %s", groups_intersect)
+        self.logger.debug("Groups correct? %s", not groups_intersect)
+
+        ray_1 = line_direction_1 if groups_intersect else line_direction_2
+        ray_2 = ray_1 * -1
+        self.logger.debug("Ray directions: %s and %s", ray_1, ray_2)
+
+        return ray_1, ray_2
 
     def _split_point(
         self,
