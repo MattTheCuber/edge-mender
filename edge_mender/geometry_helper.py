@@ -8,48 +8,39 @@ class GeometryHelper:
     """A class containing helper functions for geometry calculations."""
 
     @staticmethod
-    def point_in_line(
-        test_point: NDArray,
+    def is_left(
         line_point: NDArray,
-        direction: NDArray,
-        *,
-        tolerance: float = 1e-9,
+        line_direction: NDArray,
+        test_point: NDArray,
     ) -> bool:
-        """Test if a point is contained on a line.
+        """Check if a 2D point is left of a line.
 
         Parameters
         ----------
-        test_point : NDArray
-            The (x, y, z) coordinate of the point to test.
         line_point : NDArray
-            An (x, y, z) coordinate of a point on the line.
-        direction : NDArray
+            An (x, y) coordinate of a point on the line.
+        line_direction : NDArray
             The direction vector of the line.
-        tolerance : float = 1e-9
-            The tolerance for floating point comparisons.
+        test_point : NDArray
+            The (x, y) coordinate of the test point.
 
         Returns
         -------
         bool
-            True if the point lies on the line, False otherwise.
+            True if the test point is left of the line, False if the test point is right
+            of the line.
+
+        Raises
+        ------
+        ValueError
+            If the test point is on the line.
         """
-        difference = test_point - line_point
-
-        # If the direction vector is zero, line is undefined
-        if np.allclose(direction, 0):
-            return np.allclose(test_point, line_point)
-
-        # Handle division by zero by checking ratios only where direction ≠ 0
-        t_values = []
-        for i in range(3):
-            if abs(direction[i]) > tolerance:
-                t_values.append(difference[i] / direction[i])
-            elif abs(difference[i]) > tolerance:
-                # If direction is zero but diff isn't, point can't lie on line
-                return False
-
-        # All non-zero ratios must be the same
-        return np.allclose(t_values, t_values[0])
+        vx, vy = test_point[0] - line_point[0], test_point[1] - line_point[1]
+        cross = line_direction[0] * vy - line_direction[1] * vx
+        if cross == 0:
+            msg = "Point is on the line"
+            raise ValueError(msg)
+        return cross > 0
 
     @staticmethod
     def angle_between_point_and_ray(
@@ -86,33 +77,60 @@ class GeometryHelper:
         return np.arccos(dot)
 
     @staticmethod
-    def is_left(line_point: NDArray, direction: NDArray, test_point: NDArray) -> bool:
-        vx, vy = test_point[0] - line_point[0], test_point[1] - line_point[1]
-        cross = direction[0] * vy - direction[1] * vx
-        if cross == 0:
-            msg = "Point is on the line"
-            raise ValueError(msg)
-        return cross > 0
-
-    @staticmethod
     def rays_intersect(
         point_1: NDArray,
         normal_1: NDArray,
         point_2: NDArray,
         normal_2: NDArray,
         *,
-        tol: float = 1e-9,
+        tolerance: float = 1e-8,
     ) -> bool:
-        A = np.array([[normal_1[0], -normal_2[0]], [normal_1[1], -normal_2[1]]])
-        b = point_2 - point_1
+        """Check whether two 2D rays intersect.
 
-        det = np.linalg.det(A)
-        if abs(det) < tol:
-            if np.linalg.norm(np.cross(np.append(normal_1, 0), np.append(b, 0))) < tol:
+        Parameters
+        ----------
+        point_1 : NDArray
+            The origin point for the first ray.
+        normal_1 : NDArray
+            The normal vector of the first ray.
+        point_2 : NDArray
+            The origin point for the second ray.
+        normal_2 : NDArray
+            The normal vector of the second ray.
+        tolerance : float, optional
+            The tolerance for determining parallelism and colinearity, by default 1e-8
+
+        Returns
+        -------
+        bool
+            Whether the rays intersect.
+
+        Raises
+        ------
+        ValueError
+            If the rays are parallel and colinear.
+        ValueError
+            If the rays are parallel but not colinear.
+        """
+        # Build the linear system
+        coefficients = np.array(
+            [[normal_1[0], -normal_2[0]], [normal_1[1], -normal_2[1]]],
+        )
+        # Difference between ray origins
+        delta = point_2 - point_1
+
+        # Determinant tells whether the directions are linearly dependent
+        determinant = np.linalg.det(coefficients)
+        if abs(determinant) < tolerance:
+            # Use a cross product to check if delta is parallel to the first ray
+            cross_value = np.cross(np.append(normal_1, 0), np.append(delta, 0))
+            if np.linalg.norm(cross_value) < tolerance:
                 msg = "Colinear"
                 raise ValueError(msg)
             msg = "Parallel"
             raise ValueError(msg)
 
-        t, s = np.linalg.solve(A, b)
-        return t >= -tol and s >= -tol
+        # Solve for where the rays would intersect
+        t, s = np.linalg.solve(coefficients, delta)
+        # Check if the intersection point is in the positive direction of both rays
+        return t >= -tolerance and s >= -tolerance
