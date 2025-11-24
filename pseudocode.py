@@ -1,3 +1,6 @@
+# type: ignore
+
+
 def repair(mesh):
     # Iterate over the mesh edges
     for edge in mesh:

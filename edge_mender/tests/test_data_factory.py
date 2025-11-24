@@ -1,3 +1,5 @@
+"""Test the DataFactory class."""
+
 import numpy as np
 import pytest
 from numpy.typing import NDArray

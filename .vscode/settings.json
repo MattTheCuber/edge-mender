@@ -1,5 +1,5 @@
 {
-  "python.testing.pytestArgs": ["edge_mender"],
+  "python.testing.pytestArgs": ["edge_mender", "--slow"],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true
 }

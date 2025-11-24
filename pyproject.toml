@@ -59,4 +59,8 @@ unfixable = []
 convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
+"pseudocode.py" = ["ALL"]
 "*/tests/*" = ["S101"]
+
+[tool.coverage.run]
+omit = ["conftest.py", "pseudocode.py", "edge_mender/Dual_Contouring_Voxel/*"]

@@ -1,3 +1,5 @@
+"""Module for generating meshes from 3D numpy arrays using different algorithms."""
+
 import sys
 from pathlib import Path
 
@@ -14,18 +16,20 @@ from numpy.typing import NDArray
 
 
 class MeshGenerator:
+    """Class for generating meshes from 3D numpy arrays using different algorithms."""
+
     @staticmethod
     def to_mesh_cuberille(data: NDArray) -> trimesh.Trimesh:
         """Convert a Numpy array to a mesh using Cuberille from ITK."""
+        # Implicitly load ITKCommon module
         if "itk.CuberillePython" not in sys.modules:
-            print("Loading ITK Cuberille module. This will take a while...")
+            print("Loading ITK Cuberille module. This will take a while...")  # noqa: T201
 
-            itk.Image  # implicitly load ITKCommon module
-            from itk.CuberillePython import cuberille_image_to_mesh_filter
+            itk.Image  # pyright: ignore[reportAttributeAccessIssue]  # noqa: B018
 
-            print("ITK Cuberille module loaded.")
+            print("ITK Cuberille module loaded.")  # noqa: T201
 
-        from itk.CuberillePython import cuberille_image_to_mesh_filter
+        from itk.CuberillePython import cuberille_image_to_mesh_filter  # noqa: PLC0415
 
         # Generate the mesh using ITK's Cuberille implementation
         itk_mesh: itk.itkMeshBasePython.itkMeshD3 = cuberille_image_to_mesh_filter(
@@ -60,10 +64,11 @@ class MeshGenerator:
     @staticmethod
     def to_mesh_surface_nets(data: NDArray) -> trimesh.Trimesh:
         """Convert a Numpy array to a mesh using Surface Nets from PyVista/VTK."""
-        pv_data: pv.ImageData = pv.wrap(data)
+        pv_data: pv.ImageData = pv.wrap(data)  # pyright: ignore[reportAssignmentType]
         mesh = pv_data.contour_labels(output_mesh_type="triangles", smoothing=False)
         faces = mesh.faces.reshape((mesh.n_cells, 4))[:, 1:]
         mesh = trimesh.Trimesh(mesh.points, faces)
+        # TODO: This shouldn't be needed after https://gitlab.kitware.com/vtk/vtk/-/issues/19156
         mesh.fix_normals()
         if mesh.volume < 0:
             mesh.invert()
@@ -73,8 +78,8 @@ class MeshGenerator:
     def to_mesh_dual_contouring(data: NDArray) -> trimesh.Trimesh:
         """Convert a Numpy array to a mesh using Dual Contouring from Daniel Wilmes."""
         # Add the submodule to the path so we can import it
-        project_root = Path(__file__).parent / "edge_mender" / "Dual_Contouring_Voxel"
-        if not project_root.exists():
+        project_root = Path(__file__).parent / "Dual_Contouring_Voxel"
+        if not project_root.exists():  # pragma: no cover
             missing_module_error = (
                 "Could not find Dual Contouring module. "
                 "Perhaps you forgot to run `git submodule update --init`?"
@@ -83,20 +88,15 @@ class MeshGenerator:
         sys.path.append(str(project_root))
 
         # Remove the app code from the Dual Contouring module
-        p = (
-            Path(__file__).parent
-            / "edge_mender"
-            / "Dual_Contouring_Voxel"
-            / "Dual_Contouring.py"
-        )
-        lines = p.read_text().splitlines()
+        dual_contouring_py = project_root / "Dual_Contouring.py"
+        lines = dual_contouring_py.read_text().splitlines()
         try:
             idx = next(i for i, line in enumerate(lines) if line == "app = myapp()")
         except StopIteration:
             idx = None
-        if idx is not None:
+        if idx is not None:  # pragma: no cover
             new_content = "\n".join(lines[:idx])
-            p.write_text(new_content + ("\n" if new_content else ""))
+            dual_contouring_py.write_text(new_content + ("\n" if new_content else ""))
 
         from edge_mender.Dual_Contouring_Voxel.Dual_Contouring import (  # noqa: PLC0415
             dual_contouring,
