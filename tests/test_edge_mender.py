@@ -206,3 +206,28 @@ def test_repair(data: NDArray) -> None:
     mender = EdgeMender(mesh)
     mender.repair()
     assert len(mender.find_non_manifold_edges()[2]) == 0
+
+
+def test_repair_move() -> None:
+    """Test that the repair function works with moving the vertices."""
+    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion())
+    mender = EdgeMender(mesh)
+    new_vertices = mender.repair(move_distance=0.1)[1]
+    assert mesh.vertices[new_vertices].tolist() == [[1.4, 2.5, 1.4], [1.6, 2.5, 1.6]]
+
+
+def test_repair_skip() -> None:
+    """Test that the repair function works with skipping edges."""
+    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard())
+    mender = EdgeMender(mesh)
+    mender.repair(skip_edges=[49])
+    assert len(mender.find_non_manifold_edges()[2]) == 1
+
+
+def test_repair_only() -> None:
+    """Test that the repair function works with only selected some edges."""
+    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard())
+    mender = EdgeMender(mesh)
+    num_nmes = len(mender.find_non_manifold_edges()[2])
+    mender.repair(only_edges=[49])
+    assert len(mender.find_non_manifold_edges()[2]) == num_nmes - 1
