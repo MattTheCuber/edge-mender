@@ -267,7 +267,7 @@ class EdgeMender:
                         other_point,
                     )
 
-                    ray, opposite_ray = self._get_split_direction_rays(
+                    split_direction = self._get_split_direction(
                         edge_direction,
                         original_edge_faces,
                         points,
@@ -277,10 +277,12 @@ class EdgeMender:
                     new_vertices.append(edge_vertex_index)
                     new_vertices.append(new_vertex)
                     if shift_distance:
-                        shift_vertices[edge_vertex_index] = point + (
-                            opposite_ray * shift_distance
+                        shift_vertices[edge_vertex_index] = point - (
+                            split_direction * shift_distance
                         )
-                        shift_vertices[new_vertex] = new_point + (ray * shift_distance)
+                        shift_vertices[new_vertex] = new_point + (
+                            split_direction * shift_distance
+                        )
 
                     faces_to_reconnect = self._get_faces_at_vertex(edge_vertex_index)
                     faces_to_reconnect_centers = self._get_face_centers(
@@ -297,8 +299,7 @@ class EdgeMender:
                             edge_vertex_index,
                             new_point,
                             new_vertex,
-                            ray,
-                            opposite_ray,
+                            split_direction,
                         )
                         new_faces.append(face_index)
 
@@ -313,7 +314,7 @@ class EdgeMender:
             ):
                 self.logger.debug("No vertices split, floor and ceiling case")
 
-                ray, opposite_ray = self._get_split_direction_rays(
+                split_direction = self._get_split_direction(
                     edge_direction,
                     original_edge_faces,
                     points,
@@ -326,10 +327,10 @@ class EdgeMender:
                 new_vertices.append(new_vertex_right)
                 if shift_distance:
                     shift_vertices[new_vertex_left] = new_point_left + (
-                        ray * shift_distance
+                        split_direction * shift_distance
                     )
-                    shift_vertices[new_vertex_right] = new_point_right + (
-                        opposite_ray * shift_distance
+                    shift_vertices[new_vertex_right] = new_point_right - (
+                        split_direction * shift_distance
                     )
 
                 faces_to_reconnect = np.array(list(current_edge_faces))
@@ -346,8 +347,7 @@ class EdgeMender:
                         new_point_left,
                         new_vertex_left,
                         new_vertex_right,
-                        ray,
-                        opposite_ray,
+                        split_direction,
                     )
                     self._face_normals = np.vstack(
                         [self._face_normals, self._face_normals[face_index]],
@@ -476,16 +476,16 @@ class EdgeMender:
         )
 
         # Check if the normals point towards the edge direction
-        dot = np.dot(unique_normals, edge_direction)
+        dot = np.dot(all_normals, edge_direction)
         return np.any(dot == 1).item()
 
-    def _get_split_direction_rays(
+    def _get_split_direction(
         self,
         edge_direction: NDArray,
         edge_face_indices: NDArray,
         edge_points: NDArray,
-    ) -> tuple[NDArray, NDArray]:
-        """Get the two ray directions to use for splitting.
+    ) -> NDArray:
+        """Get the direction vector to use for splitting.
 
         Parameters
         ----------
@@ -498,10 +498,8 @@ class EdgeMender:
 
         Returns
         -------
-        ray : NDArray
-            The ray direction vector.
-        opposite_ray : NDArray
-            The opposite ray direction vector.
+        split_direction : NDArray
+            The direction vector.
         """
         i = ~edge_direction.astype(bool)
 
@@ -569,11 +567,9 @@ class EdgeMender:
         self.logger.debug("Groups intersect? %s", groups_intersect)
         self.logger.debug("Groups correct? %s", not groups_intersect)
 
-        ray = line_direction_1 if groups_intersect else line_direction_2
-        opposite_ray = ray * -1
-        self.logger.debug("Ray directions: %s and %s", ray, opposite_ray)
-
-        return ray, opposite_ray
+        split_direction = line_direction_1 if groups_intersect else line_direction_2
+        self.logger.debug("Split direction: %s", split_direction)
+        return split_direction
 
     def _split_point(
         self,
@@ -615,8 +611,7 @@ class EdgeMender:
         vertex_to_reassign: int,
         new_point: NDArray,
         new_vertex: int,
-        ray: NDArray,
-        opposite_ray: NDArray,
+        split_direction: NDArray,
     ) -> None:
         """Reassign the given face to the new vertex based on the angles.
 
@@ -632,38 +627,25 @@ class EdgeMender:
             The (x, y, z) coordinates of the new point created from the split.
         new_vertex : int
             The index of the new vertex created from the split.
-        ray : NDArray
-            The ray direction vector.
-        opposite_ray : NDArray
-            The opposite ray direction vector.
+        split_direction : NDArray
+            The split direction vector.
 
         Raises
         ------
         ValueError
-            Raised if the angles between the face center and the rays are the same.
+            Raised if face center is equidistant to the split direction origin.
         """
         face_points = self.mesh.faces[face_index]
-        angle_1 = GeometryHelper.angle_between_point_and_ray(
-            face_center,
+        matches_split_direction = GeometryHelper.point_in_direction(
             new_point,
-            ray,
-        )
-        angle_2 = GeometryHelper.angle_between_point_and_ray(
+            split_direction,
             face_center,
-            new_point,
-            opposite_ray,
         )
 
-        if angle_1 < angle_2:
+        if matches_split_direction:
             face_points[face_points == vertex_to_reassign] = new_vertex
-        elif angle_1 > angle_2:
-            pass  # No change
         else:
-            msg = (
-                "Angles are the same, this is impossible. "
-                "Are any of your face normals inverted?"
-            )
-            raise ValueError(msg)
+            pass  # No change
 
     def _split_edge(self, points: NDArray) -> tuple[NDArray, int, NDArray, int]:
         """Split the given edge by creating two new vertices in the mesh.
@@ -713,8 +695,7 @@ class EdgeMender:
         new_point: NDArray,
         new_vertex_left: int,
         new_vertex_right: int,
-        ray: NDArray,
-        opposite_ray: NDArray,
+        split_direction: NDArray,
     ) -> int:
         """Split the face sharing an edge in half.
 
@@ -732,10 +713,8 @@ class EdgeMender:
             The index of the first new vertex created from the split.
         new_vertex_right : int
             The index of the second new vertex created from the split.
-        ray : NDArray
-            The ray direction vector.
-        opposite_ray : NDArray
-            The opposite ray direction vector.
+        split_direction : NDArray
+            The split direction vector.
 
         Returns
         -------
@@ -745,30 +724,22 @@ class EdgeMender:
         Raises
         ------
         ValueError
-            Raised if the angles between the face center and the rays are the same.
+            Raised if face center is equidistant to the split direction origin.
         """
         face_points = self.mesh.faces[face_index]
-        angle_1 = GeometryHelper.angle_between_point_and_ray(
-            face_center,
+        matches_split_direction = GeometryHelper.point_in_direction(
             new_point,
-            ray,
-        )
-        angle_2 = GeometryHelper.angle_between_point_and_ray(
+            split_direction,
             face_center,
-            new_point,
-            opposite_ray,
         )
 
         new_face_points = face_points.copy()
-        if angle_1 < angle_2:
+        if matches_split_direction:
             face_points[face_points == edge_vertices[0]] = new_vertex_left
             new_face_points[face_points == edge_vertices[1]] = new_vertex_left
-        elif angle_1 > angle_2:
+        else:
             face_points[face_points == edge_vertices[0]] = new_vertex_right
             new_face_points[face_points == edge_vertices[1]] = new_vertex_right
-        else:
-            msg = "Angles are the same, this is impossible. Something broke!"
-            raise ValueError(msg)
 
         self.mesh.faces = np.vstack([self.mesh.faces, new_face_points])
 

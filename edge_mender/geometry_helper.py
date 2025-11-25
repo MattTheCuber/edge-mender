@@ -43,38 +43,41 @@ class GeometryHelper:
         return cross > 0
 
     @staticmethod
-    def angle_between_point_and_ray(
-        point: NDArray,
-        ray_point: NDArray,
-        ray_dir: NDArray,
-    ) -> float:
-        """Compute the angle between a test point and a ray.
+    def point_in_direction(
+        ray_origin: NDArray,
+        ray_direction: NDArray,
+        test_point: NDArray,
+    ) -> bool:
+        """Check whether a test point is in the direction of a ray.
 
         Parameters
         ----------
-        point : NDArray
-            The test point.
-        ray_point : NDArray
+        ray_origin : NDArray
             The origin point for the ray.
-        ray_dir : NDArray
+        ray_direction : NDArray
             The direction of the ray.
+        test_point : NDArray
+            The test point.
 
         Returns
         -------
-        float
-            The angle in radians between the test point and the ray.
+        bool
+            Whether the test point is in the direction of the ray.
+
+        Raises
+        ------
+        ValueError
+            If the test point is equidistant from the ray origin.
         """
-        # Vector from ray point to external point
-        v = point - ray_point
-
-        # Normalize direction and v
-        d_norm = ray_dir / np.linalg.norm(ray_dir)
-        v_norm = v / np.linalg.norm(v)
-
-        # Clamp to handle floating point precision issues
-        dot = np.clip(np.dot(d_norm, v_norm), -1.0, 1.0)
-
-        return np.arccos(dot)
+        ray_direction = ray_direction / np.linalg.norm(ray_direction)
+        s = np.dot(test_point - ray_origin, ray_direction)
+        if s == 0:
+            msg = (
+                "Point is equidistant to the ray origin, this is impossible. "
+                "Are any of your face normals inverted?"
+            )
+            raise ValueError(msg)
+        return s > 0
 
     @staticmethod
     def rays_intersect(
@@ -89,13 +92,13 @@ class GeometryHelper:
 
         Parameters
         ----------
-        point_1 : NDArray
+        point_a : NDArray
             The origin point for the first ray.
-        normal_1 : NDArray
+        normal_a : NDArray
             The normal vector of the first ray.
-        point_2 : NDArray
+        point_b : NDArray
             The origin point for the second ray.
-        normal_2 : NDArray
+        normal_b : NDArray
             The normal vector of the second ray.
         tolerance : float, optional
             The tolerance for determining parallelism and colinearity, by default 1e-8

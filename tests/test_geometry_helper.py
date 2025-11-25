@@ -45,33 +45,43 @@ def test_is_left(
 
 
 @pytest.mark.parametrize(
-    ("point", "ray_point", "ray_dir", "expected_angle"),
+    ("point", "ray_origin", "ray_direction", "expected"),
     [
-        ([1, 0, 0], [0, 0, 0], [1, 0, 0], 0),
-        ([1, 0, 0], [0, 0, 0], [2, 0, 0], 0),
-        ([1, 1, 0], [0, 0, 0], [1, 0, 0], 45),
-        ([2, 2, 0], [0, 0, 0], [1, 0, 0], 45),
-        ([1, -1, 0], [0, 0, 0], [1, 0, 0], 45),
-        ([0, 1, 0], [0, 0, 0], [1, 0, 0], 90),
-        ([1, 1, 0], [0, 0, 0], [-1, 0, 0], 135),
-        ([0, 1, 1], [0, 0, 0], [0, -1, 0], 135),
-        ([-1, -1, -1], [0, 0, 0], [1, 1, 1], 180),
-        ([0, 1, 1], [1, 1, 1], [1, 0, 0], 180),
+        ([1, 0, 0], [0, 0, 0], [1, 0, 0], True),
+        ([1, 0, 0], [0, 0, 0], [2, 0, 0], True),
+        ([1, 1, 0], [0, 0, 0], [1, 0, 0], True),
+        ([2, 2, 0], [0, 0, 0], [1, 0, 0], True),
+        ([1, -1, 0], [0, 0, 0], [1, 0, 0], True),
+        ([1, 1, 0], [0, 0, 0], [-1, 0, 0], False),
+        ([0, 1, 1], [0, 0, 0], [0, -1, 0], False),
+        ([-1, -1, -1], [0, 0, 0], [1, 1, 1], False),
+        ([0, 1, 1], [1, 1, 1], [1, 0, 0], False),
     ],
 )
-def test_angle_between_point_and_ray(
+def test_point_in_direction(
     point: list[int],
-    ray_point: list[int],
-    ray_dir: list[int],
-    expected_angle: int,
+    ray_origin: list[int],
+    ray_direction: list[int],
+    *,
+    expected: bool,
 ) -> None:
-    """Test GeometryHelper.angle_between_point_and_ray."""
-    angle = GeometryHelper.angle_between_point_and_ray(
-        point=np.array(point),
-        ray_point=np.array(ray_point),
-        ray_dir=np.array(ray_dir),
+    """Test GeometryHelper.point_in_direction."""
+    matches_direction = GeometryHelper.point_in_direction(
+        ray_origin=np.array(ray_origin),
+        ray_direction=np.array(ray_direction),
+        test_point=np.array(point),
     )
-    assert np.isclose(np.rad2deg(angle), expected_angle)
+    assert matches_direction == expected
+
+
+def test_point_in_direction_fails() -> None:
+    """Test GeometryHelper.point_in_direction."""
+    with pytest.raises(ValueError, match="Point is equidistant"):
+        GeometryHelper.point_in_direction(
+            ray_origin=np.array([0, 0, 0]),
+            ray_direction=np.array([1, 0, 0]),
+            test_point=np.array([0, 1, 0]),
+        )
 
 
 @pytest.mark.parametrize(
