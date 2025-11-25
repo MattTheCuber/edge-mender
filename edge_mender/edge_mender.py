@@ -387,15 +387,13 @@ class EdgeMender:
             An array of face indices.
         """
         v0, v1 = edge_vertices
-        e = self.mesh.edges
-        return self.mesh.edges_face[
-            np.concatenate(
-                (
-                    np.where((e[:, 0] == v0) & (e[:, 1] == v1))[0],
-                    np.where((e[:, 0] == v1) & (e[:, 1] == v0))[0],
-                ),
-            )
-        ]
+        f = self.mesh.faces
+        # Match faces that contain the first vertex
+        match_v0 = (f[:, 0] == v0) | (f[:, 1] == v0) | (f[:, 2] == v0)
+        # Match faces that contain the second vertex
+        match_v1 = (f[:, 0] == v1) | (f[:, 1] == v1) | (f[:, 2] == v1)
+        # Return face indices that contain both vertices
+        return np.where(match_v0 & match_v1)[0]
 
     def _get_faces_at_vertex(self, vertex: int) -> NDArray:
         """Get the face indices at the specific vertex index.
