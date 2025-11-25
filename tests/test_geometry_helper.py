@@ -29,6 +29,25 @@ def test_any_directions_match(
 
 
 @pytest.mark.parametrize(
+    ("direction", "expected_a", "expected_b"),
+    [
+        ([1, 0, 0], [0, 1, 1], [0, -1, 1]),
+        ([0, 1, 0], [1, 0, 1], [-1, 0, 1]),
+        ([0, 0, 1], [1, 1, 0], [-1, 1, 0]),
+    ],
+)
+def test_diagonal_orthogonal_directions(
+    direction: list[int],
+    expected_a: list[int],
+    expected_b: list[int],
+) -> None:
+    """Test GeometryHelper.get_diagonal_orthogonal_directions."""
+    a, b = GeometryHelper.get_diagonal_orthogonal_directions(np.array(direction))
+    assert a.tolist() == expected_a
+    assert b.tolist() == expected_b
+
+
+@pytest.mark.parametrize(
     ("line_point", "line_direction", "test_point", "expected"),
     [
         ([0, 0], [1, 0], [0, 1], True),

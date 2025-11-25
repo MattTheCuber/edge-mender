@@ -495,22 +495,22 @@ class EdgeMender:
         i = ~edge_direction.astype(bool)
 
         # Get two orthagonal directions to the edge direction
-        line_direction_1 = [1, 1, 1] - np.abs(edge_direction)
-        line_direction_2 = line_direction_1.copy()
-        line_direction_2[np.argmax(line_direction_2)] = -1
+        line_direction_a, line_direction_b = (
+            GeometryHelper.get_diagonal_orthogonal_directions(edge_direction)
+        )
         self.logger.debug(
             "Line directions: %s and %s",
-            line_direction_1,
-            line_direction_2,
+            line_direction_a,
+            line_direction_b,
         )
 
         edge_face_centers = self._get_face_centers(edge_face_indices)
         self.logger.debug("Edge face centers: %s", edge_face_centers)
 
-        group_1_centers = []
-        group_2_centers = []
-        group_1_faces = []
-        group_2_faces = []
+        group_a_centers = []
+        group_a_faces = []
+        group_b_centers = []
+        group_b_faces = []
         for center, face_index in zip(
             edge_face_centers,
             edge_face_indices,
@@ -520,45 +520,45 @@ class EdgeMender:
                 "Testing if point %s is left of line at %s with direction %s",
                 center[i],
                 edge_points[0][i],
-                line_direction_1[i],
+                line_direction_a[i],
             )
             if GeometryHelper.is_left(
                 edge_points[0][i],
-                line_direction_1[i],
+                line_direction_a[i],
                 center[i],
             ):
-                group_1_centers.append(center)
-                group_1_faces.append(face_index)
+                group_a_centers.append(center)
+                group_a_faces.append(face_index)
             else:
-                group_2_centers.append(center)
-                group_2_faces.append(face_index)
+                group_b_centers.append(center)
+                group_b_faces.append(face_index)
         self.logger.debug(
             "Group 1 has faces %s with centers %s, "
             "Group 2 has faces %s with centers %s",
-            group_1_faces,
-            group_1_centers,
-            group_2_faces,
-            group_2_centers,
+            group_a_faces,
+            group_a_centers,
+            group_b_faces,
+            group_b_centers,
         )
 
-        group_1_normals = self._face_normals[np.array(group_1_faces)]
-        group_2_normals = self._face_normals[np.array(group_2_faces)]
+        group_a_normals = self._face_normals[np.array(group_a_faces)]
+        group_b_normals = self._face_normals[np.array(group_b_faces)]
         self.logger.debug(
             "Group 1 has normals %s, Group 2 has normals %s",
-            list(group_1_normals),
-            list(group_2_normals),
+            list(group_a_normals),
+            list(group_b_normals),
         )
 
         groups_intersect = GeometryHelper.rays_intersect(
-            point_a=group_1_centers[0][i],
-            normal_a=group_1_normals[0][i],
-            point_b=group_1_centers[1][i],
-            normal_b=group_1_normals[1][i],
+            point_a=group_a_centers[0][i],
+            normal_a=group_a_normals[0][i],
+            point_b=group_a_centers[1][i],
+            normal_b=group_a_normals[1][i],
         )
         self.logger.debug("Groups intersect? %s", groups_intersect)
         self.logger.debug("Groups correct? %s", not groups_intersect)
 
-        split_direction = line_direction_1 if groups_intersect else line_direction_2
+        split_direction = line_direction_a if groups_intersect else line_direction_b
         self.logger.debug("Split direction: %s", split_direction)
         return split_direction
 

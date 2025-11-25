@@ -27,6 +27,29 @@ class GeometryHelper:
         return np.any(dot == 1).item()
 
     @staticmethod
+    def get_diagonal_orthogonal_directions(
+        direction: NDArray,
+    ) -> tuple[NDArray, NDArray]:
+        """Calculate two diagonal directions orthogonal to the given direction.
+
+        Parameters
+        ----------
+        direction : NDArray
+            The input direction vector.
+
+        Returns
+        -------
+        NDArray
+            The first orthogonal direction vectors.
+        NDArray
+            The second orthogonal direction vectors.
+        """
+        line_direction_a = [1, 1, 1] - np.abs(direction)
+        line_direction_b = line_direction_a.copy()
+        line_direction_b[np.argmax(line_direction_a)] = -1
+        return line_direction_a, line_direction_b
+
+    @staticmethod
     def is_left(
         line_point: NDArray,
         line_direction: NDArray,
