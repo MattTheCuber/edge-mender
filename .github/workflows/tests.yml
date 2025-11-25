@@ -38,7 +38,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run Tests
-        run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml
+        run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml --cov-branch
 
       - name: Pytest Coverage Comment
         uses: MishaKav/pytest-coverage-comment@v1.2.0

@@ -25,7 +25,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run Tests
-        run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml
+        run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml --cov-branch
 
       - name: Coverage Comment
         id: coverage
