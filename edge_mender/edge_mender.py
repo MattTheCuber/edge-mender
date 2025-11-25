@@ -140,6 +140,42 @@ class EdgeMender:
         skip_edges: list[int] | None = None,
         only_edges: list[int] | None = None,
     ) -> tuple[list[int], list[int], list[list[int]]]:
+        """Repair non-manifold edges in the mesh.
+
+        Non-manifold edges are defined as edges shared by 4 faces.
+
+        It accomplishes this by iterating through each non-manifold edge and splitting
+        the vertices or faces as needed to restore manifoldness.
+
+        Parameters
+        ----------
+        move_distance : float, optional
+            The distance to move vertices when repairing, by default 0.0
+
+            This will typically only be used for visualization purposes. The value
+            should be less than 25% of the voxel size to avoid creating intersecting
+            faces.
+        skip_edges : list[int] | None, optional
+            List of edges to skip repairing, by default None
+
+            This is only used for debugging purposes.
+        only_edges : list[int] | None, optional
+            List of edges to repair exclusively, by default None
+
+            This is only used for debugging purposes.
+
+        Returns
+        -------
+        new_faces : list[int]
+            The indices of the faces that were added or modified during the repair
+            process.
+        new_vertices : list[int]
+            The indices of the vertices that were added or modified during the repair
+            process.
+        new_edges : list[list[int]]
+            The indices of the edges that were added or modified during the repair
+            process.
+        """
         non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
             self.find_non_manifold_edges()
         )
@@ -350,27 +386,59 @@ class EdgeMender:
         )
 
     def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
+        """Get the face indices sharing the given edge vertex indices.
+
+        Parameters
+        ----------
+        edge_vertices : NDArray
+            Two edge vertex indices.
+
+        Returns
+        -------
+        NDArray
+            An array of face indices.
+        """
+        v0, v1 = edge_vertices
+        e = self.mesh.edges
         return self.mesh.edges_face[
             np.concatenate(
                 (
-                    np.where(
-                        (self.mesh.edges[:, 0] == edge_vertices[0])
-                        & (self.mesh.edges[:, 1] == edge_vertices[1]),
-                    )[0],
-                    np.where(
-                        (self.mesh.edges[:, 0] == edge_vertices[1])
-                        & (self.mesh.edges[:, 1] == edge_vertices[0]),
-                    )[0],
+                    np.where((e[:, 0] == v0) & (e[:, 1] == v1))[0],
+                    np.where((e[:, 0] == v1) & (e[:, 1] == v0))[0],
                 ),
             )
         ]
 
     def _get_faces_at_vertex(self, vertex: int) -> NDArray:
+        """Get the face indices at the specific vertex index.
+
+        Parameters
+        ----------
+        vertex : int
+            The vertex index.
+
+        Returns
+        -------
+        NDArray
+            An array of face indices.
+        """
         # Get connected faces
         faces = self._vertex_faces[vertex]
         return faces[faces != -1]  # remove padding (-1 entries)
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
+        """Get the centers of the given face indices.
+
+        Parameters
+        ----------
+        face_indices : NDArray
+            The face indices.
+
+        Returns
+        -------
+        NDArray
+            The centers of the faces.
+        """
         return np.array(
             np.mean(self.mesh.vertices[self.mesh.faces[face_indices]], axis=1),
         )
@@ -381,6 +449,22 @@ class EdgeMender:
         point: NDArray,
         edge_direction: NDArray,
     ) -> bool:
+        """Check if any face normals at the given vertex match the edge direction.
+
+        Parameters
+        ----------
+        edge_vertex_index : int
+            The index of the vertex at the edge.
+        point : NDArray
+            The point at the vertex.
+        edge_direction : NDArray
+            The direction vector of the edge.
+
+        Returns
+        -------
+        bool
+            Whether any face normals at the vertex match the edge direction.
+        """
         # Find faces at the vertex
         faces = self._get_faces_at_vertex(edge_vertex_index)
         self.logger.debug(
@@ -490,23 +574,56 @@ class EdgeMender:
 
     def _split_point(
         self,
-        point_to_move: NDArray,
-        vertex_to_move: int,
+        point_to_split: NDArray,
+        vertex_to_split: int,
     ) -> tuple[NDArray, int]:
-        new_point = point_to_move.copy()
+        """Split the given point by duplicating the provided vertex in the mesh.
+
+        Parameters
+        ----------
+        point_to_split : NDArray
+            The (x, y, z) coordinates of the point to split.
+        vertex_to_split : int
+            The index of the vertex to split.
+
+        Returns
+        -------
+        new_point : NDArray
+            The (x, y, z) coordinates of the new point created from the split.
+        new_vertex : int
+            The index of the new vertex created from the split.
+        """
+        new_point = point_to_split.copy()
         self.mesh.vertices = np.vstack([self.mesh.vertices, new_point])
         split_vertex_index_2 = self.mesh.vertices.shape[0] - 1
         self.logger.debug(
             "Split points: %d at %s and %d at %s",
-            vertex_to_move,
-            point_to_move,
+            vertex_to_split,
+            point_to_split,
             split_vertex_index_2,
             new_point,
         )
-
         return new_point, split_vertex_index_2
 
     def _split_edge(self, points: NDArray) -> tuple[NDArray, int, NDArray, int]:
+        """Split the given edge by creating two new vertices in the mesh.
+
+        Parameters
+        ----------
+        points : NDArray
+            The (x, y, z) coordinates of the points defining the edge to split.
+
+        Returns
+        -------
+        new_point_0 : NDArray
+            The (x, y, z) coordinates of the first new point created from the split.
+        new_vertex_0 : int
+            The index of the first new vertex created from the split.
+        new_point_1 : NDArray
+            The (x, y, z) coordinates of the second new point created from the split.
+        new_vertex_1 : int
+            The index of the second new vertex created from the split.
+        """
         new_point_0 = np.mean(points, axis=0)
         new_point_1 = np.mean(points, axis=0)
         self.mesh.vertices = np.vstack([self.mesh.vertices, new_point_0, new_point_1])
@@ -519,12 +636,11 @@ class EdgeMender:
             new_vertex_index_1,
             new_point_1,
         )
-
         return new_point_0, new_vertex_index_0, new_point_1, new_vertex_index_1
 
     def _split_face(
         self,
-        edge: NDArray,
+        edge_vertices: NDArray,
         face_index: NDArray,
         face_center: NDArray,
         new_point: NDArray,
@@ -547,11 +663,11 @@ class EdgeMender:
 
         new_face_points = face_points.copy()
         if angle_1 < angle_2:
-            face_points[face_points == edge[0]] = new_vertex_0
-            new_face_points[face_points == edge[1]] = new_vertex_0
+            face_points[face_points == edge_vertices[0]] = new_vertex_0
+            new_face_points[face_points == edge_vertices[1]] = new_vertex_0
         elif angle_1 > angle_2:
-            face_points[face_points == edge[0]] = new_vertex_1
-            new_face_points[face_points == edge[1]] = new_vertex_1
+            face_points[face_points == edge_vertices[0]] = new_vertex_1
+            new_face_points[face_points == edge_vertices[1]] = new_vertex_1
         else:
             msg = "Angles are the same, this is impossible. Something broke!"
             raise ValueError(msg)
