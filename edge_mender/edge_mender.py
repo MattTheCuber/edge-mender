@@ -605,6 +605,63 @@ class EdgeMender:
         )
         return new_point, split_vertex_index_2
 
+    def _reassign_face(
+        self,
+        face_index: int,
+        face_center: NDArray,
+        vertex_to_move: int,
+        new_point: NDArray,
+        new_vertex: int,
+        ray_1: NDArray,
+        ray_2: NDArray,
+    ):
+        """Reassign the given face to the new vertex based on the angles.
+
+        Parameters
+        ----------
+        face_index : int
+            The index of the face to reassign.
+        face_center : NDArray
+            The center point of the face to reassign.
+        vertex_to_move : int
+            The index of the vertex on this face to move.
+        new_point : NDArray
+            The (x, y, z) coordinates of the new point created from the split.
+        new_vertex : int
+            The index of the new vertex created from the split.
+        ray_1 : NDArray
+            The first ray direction vector.
+        ray_2 : NDArray
+            The second ray direction vector.
+
+        Raises
+        ------
+        ValueError
+            Raised if the angles between the face center and the rays are the same.
+        """
+        face_points = self.mesh.faces[face_index]
+        angle_1 = GeometryHelper.angle_between_point_and_ray(
+            face_center,
+            new_point,
+            ray_1,
+        )
+        angle_2 = GeometryHelper.angle_between_point_and_ray(
+            face_center,
+            new_point,
+            ray_2,
+        )
+
+        if angle_1 < angle_2:
+            face_points[face_points == vertex_to_move] = new_vertex
+        elif angle_1 > angle_2:
+            pass  # No change
+        else:
+            msg = (
+                "Angles are the same, this is impossible. "
+                "Are any of your face normals inverted?"
+            )
+            raise ValueError(msg)
+
     def _split_edge(self, points: NDArray) -> tuple[NDArray, int, NDArray, int]:
         """Split the given edge by creating two new vertices in the mesh.
 
@@ -649,6 +706,37 @@ class EdgeMender:
         ray_1: NDArray,
         ray_2: NDArray,
     ) -> int:
+        """Split the face sharing an edge in half.
+
+        Parameters
+        ----------
+        edge_vertices : NDArray
+            The vertex indices defining the edge to split.
+        face_index : int
+            The index of the face to split.
+        face_center : NDArray
+            The center point of the face to split.
+        new_point : NDArray
+            The (x, y, z) coordinates of the new points created from the split.
+        new_vertex_0 : int
+            The index of the first new vertex created from the split.
+        new_vertex_1 : int
+            The index of the second new vertex created from the split.
+        ray_1 : NDArray
+            The first ray direction vector.
+        ray_2 : NDArray
+            The second ray direction vector.
+
+        Returns
+        -------
+        int
+            The index of the new face created from the split.
+
+        Raises
+        ------
+        ValueError
+            Raised if the angles between the face center and the rays are the same.
+        """
         face_points = self.mesh.faces[face_index]
         angle_1 = GeometryHelper.angle_between_point_and_ray(
             face_center,
@@ -676,44 +764,25 @@ class EdgeMender:
 
         return self.mesh.faces.shape[0] - 1
 
-    def _reassign_face(
-        self,
-        face_index: NDArray,
-        face_center: NDArray,
-        vertex_to_move: int,
-        new_point: NDArray,
-        new_vertex: int,
-        ray_1: NDArray,
-        ray_2: NDArray,
-    ):
-        face_points = self.mesh.faces[face_index]
-        angle_1 = GeometryHelper.angle_between_point_and_ray(
-            face_center,
-            new_point,
-            ray_1,
-        )
-        angle_2 = GeometryHelper.angle_between_point_and_ray(
-            face_center,
-            new_point,
-            ray_2,
-        )
-
-        if angle_1 < angle_2:
-            face_points[face_points == vertex_to_move] = new_vertex
-        elif angle_1 > angle_2:
-            pass  # No change
-        else:
-            msg = (
-                "Angles are the same, this is impossible. "
-                "Are any of your face normals inverted?"
-            )
-            raise ValueError(msg)
-
     def _get_new_edges(
         self,
         non_manifold_vertices: NDArray,
         new_vertices: list[int],
     ) -> NDArray:
+        """Get the new or updated edges after repairing the mesh.
+
+        Parameters
+        ----------
+        non_manifold_vertices : NDArray
+            The original array of non-manifold vertex indices.
+        new_vertices : list[int]
+            The indices of the new vertices created during the repair.
+
+        Returns
+        -------
+        NDArray
+            The new or updated edges after repairing the mesh.
+        """
         check = np.hstack([non_manifold_vertices.flatten(), new_vertices])
         mask = np.isin(self.mesh.edges_sorted[:, 0], check) & np.isin(
             self.mesh.edges_sorted[:, 1],

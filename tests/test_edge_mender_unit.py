@@ -312,6 +312,87 @@ def test_split_point(mesh: trimesh.Trimesh, vertex_to_split: int) -> None:
 
 
 @pytest.mark.parametrize(
+    ("mesh", "vertex_to_split", "ray_1", "ray_2", "face_indices"),
+    [
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion()),
+            15,
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            [22, 25, 18, 41],  # See test_get_faces_at_edge
+        ),
+    ],
+)
+def test_reassign_face(
+    mesh: trimesh.Trimesh,
+    vertex_to_split: int,
+    ray_1: list[int],
+    ray_2: list[int],
+    face_indices: list[int],
+) -> None:
+    """Test that the split_face function properly creates and updates the faces."""
+    edge_mender = EdgeMender(mesh)
+    new_point, new_vertex = edge_mender._split_point(
+        mesh.vertices[vertex_to_split],
+        vertex_to_split,
+    )
+
+    face_centers = edge_mender._get_face_centers(np.array(face_indices))
+    for i, face_index in enumerate(face_indices):
+        edge_mender._reassign_face(
+            face_index,
+            face_centers[i],
+            vertex_to_split,
+            new_point,
+            new_vertex,
+            np.array(ray_1),
+            np.array(ray_2),
+        )
+
+    assert np.any(mesh.faces[face_indices] == vertex_to_split, axis=1).sum() == 2  # noqa: PLR2004
+    assert np.any(mesh.faces[face_indices] == new_vertex, axis=1).sum() == 2  # noqa: PLR2004
+
+
+@pytest.mark.parametrize(
+    ("mesh", "vertex_to_split", "ray_1", "ray_2", "face_indices"),
+    [
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion()),
+            15,
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            [22, 25, 18, 41],  # See test_get_faces_at_edge
+        ),
+    ],
+)
+def test_reassign_face_fail(
+    mesh: trimesh.Trimesh,
+    vertex_to_split: int,
+    ray_1: list[int],
+    ray_2: list[int],
+    face_indices: list[int],
+) -> None:
+    """Test that the split_face function properly creates and updates the faces."""
+    edge_mender = EdgeMender(mesh)
+    new_point, new_vertex = edge_mender._split_point(
+        mesh.vertices[vertex_to_split],
+        vertex_to_split,
+    )
+
+    for face_index in face_indices:
+        with pytest.raises(ValueError, match="Angles are the same"):
+            edge_mender._reassign_face(
+                face_index,
+                new_point,  # This will cause both angles to be the same
+                vertex_to_split,
+                new_point,
+                new_vertex,
+                np.array(ray_1),
+                np.array(ray_2),
+            )
+
+
+@pytest.mark.parametrize(
     ("mesh", "edge_vertices_to_split", "expected_point"),
     [
         (
