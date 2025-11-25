@@ -641,7 +641,7 @@ class EdgeMender:
     def _split_face(
         self,
         edge_vertices: NDArray,
-        face_index: NDArray,
+        face_index: int,
         face_center: NDArray,
         new_point: NDArray,
         new_vertex_0: int,

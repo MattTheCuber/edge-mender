@@ -1,5 +1,7 @@
 """Test private functions in the EdgeMender class."""
 
+from typing import Literal
+
 import numpy as np
 import pytest
 import trimesh
@@ -12,6 +14,7 @@ from edge_mender.mesh_generator import MeshGenerator
 def test_edge_mender_init() -> None:
     """Test that the EdgeMender class can be initialized."""
     mesh = trimesh.creation.box()
+
     EdgeMender(mesh)
     EdgeMender(mesh, debug=True)
 
@@ -55,7 +58,9 @@ def test_get_faces_at_edge(
 ) -> None:
     """Test that the get_faces_at_edge function returns the correct faces."""
     edge_mender = EdgeMender(mesh)
+
     faces = edge_mender._get_faces_at_edge(np.array(edge_vertices))
+
     faces.sort()
     expected_faces = np.array(expected_faces)
     expected_faces.sort()
@@ -94,7 +99,9 @@ def test_get_faces_at_vertex(
     edge_mender = EdgeMender(mesh)
     # Cache the vertex faces property
     edge_mender._vertex_faces = mesh.vertex_faces
+
     faces = edge_mender._get_faces_at_vertex(vertex)
+
     faces.sort()
     expected_faces = np.array(expected_faces)
     expected_faces.sort()
@@ -123,7 +130,9 @@ def test_get_face_centers(
 ) -> None:
     """Test that the get_face_centers function returns the correct centers."""
     edge_mender = EdgeMender(mesh)
+
     centers = edge_mender._get_face_centers(faces)
+
     np.testing.assert_array_equal(centers, expected_centers)
 
 
@@ -194,6 +203,7 @@ def test_has_normals_matching_edge(
     edge_mender._vertex_faces = mesh.vertex_faces
     # Cache face normals
     edge_mender._face_normals = mesh.face_normals
+
     assert (
         edge_mender._has_normals_matching_edge(
             edge_vertex_index,
@@ -217,7 +227,7 @@ def test_has_normals_matching_edge(
         (
             MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion()),
             [0, 1, 0],
-            [22, 25, 18, 41],
+            [22, 25, 18, 41],  # See test_get_faces_at_edge
             [12, 15],
             [1, 0, 1],
             [-1, 0, -1],
@@ -225,7 +235,7 @@ def test_has_normals_matching_edge(
         (
             MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
             [0, 1, 0],
-            [22, 24, 27, 55],
+            [22, 24, 27, 55],  # See test_get_faces_at_edge
             [16, 19],
             [1, 0, 1],
             [-1, 0, -1],
@@ -233,7 +243,7 @@ def test_has_normals_matching_edge(
         (
             MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard()),
             [0, 1, 0],
-            [34, 38, 41, 79],
+            [34, 38, 41, 79],  # See test_get_faces_at_edge
             [19, 22],
             [-1, 0, 1],
             [1, 0, -1],
@@ -241,7 +251,7 @@ def test_has_normals_matching_edge(
         (
             MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard()),
             [0, 0, 1],
-            [26, 28, 33, 39],
+            [26, 28, 33, 39],  # See test_get_faces_at_edge
             [7, 19],
             [1, 1, 0],
             [-1, -1, 0],
@@ -249,7 +259,7 @@ def test_has_normals_matching_edge(
         (
             MeshGenerator.to_mesh_surface_nets(DataFactory.hanging_points()),
             [0, 0, 1],
-            [38, 40, 45, 59],
+            [38, 40, 45, 59],  # See test_get_faces_at_edge
             [10, 25],
             [-1, 1, 0],
             [1, -1, 0],
@@ -268,11 +278,13 @@ def test_get_split_direction_rays(
     edge_mender = EdgeMender(mesh)
     # Cache face normals
     edge_mender._face_normals = mesh.face_normals
+
     ray_1, ray_2 = edge_mender._get_split_direction_rays(
         np.array(edge_direction),
         np.array(edge_face_indices),
         mesh.vertices[edge_vertices],
     )
+
     assert ray_1.tolist() == expected_ray_1
     assert ray_2.tolist() == expected_ray_2
 
@@ -289,11 +301,14 @@ def test_split_point(mesh: trimesh.Trimesh, vertex_to_split: int) -> None:
     edge_mender = EdgeMender(mesh)
     before_point = mesh.vertices[vertex_to_split].copy()
     before_vertex_count = len(mesh.vertices)
+
     new_point, new_vertex = edge_mender._split_point(before_point, vertex_to_split)
+
+    assert len(mesh.vertices) == before_vertex_count + 1
     assert mesh.vertices[vertex_to_split].tolist() == before_point.tolist()
     assert new_vertex == before_vertex_count
+    assert new_vertex != vertex_to_split
     assert new_point.tolist() == before_point.tolist()
-    assert len(mesh.vertices) == before_vertex_count + 1
 
 
 @pytest.mark.parametrize(
@@ -319,11 +334,146 @@ def test_split_edge(
     """Test that the split_edge function properly creates the new vertices."""
     edge_mender = EdgeMender(mesh)
     before_vertex_count = len(mesh.vertices)
+
     new_point_0, new_vertex_0, new_point_1, new_vertex_1 = edge_mender._split_edge(
         mesh.vertices[edge_vertices_to_split],
     )
+
+    assert len(mesh.vertices) == before_vertex_count + 2
+    assert new_vertex_0 != new_vertex_1
     assert new_vertex_0 == before_vertex_count
     assert new_vertex_1 == before_vertex_count + 1
     assert new_point_0.tolist() == expected_point
     assert new_point_1.tolist() == expected_point
-    assert len(mesh.vertices) == before_vertex_count + 2
+
+
+@pytest.mark.parametrize(
+    ("mesh", "edge_vertices_to_split", "ray_1", "ray_2", "face_index"),
+    [
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            22,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            24,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            27,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            55,  # See test_get_faces_at_edge
+        ),
+    ],
+)
+def test_split_face(
+    mesh: trimesh.Trimesh,
+    edge_vertices_to_split: list[int],
+    ray_1: list[int],
+    ray_2: list[int],
+    face_index: int,
+) -> None:
+    """Test that the split_face function properly creates and updates the faces."""
+    edge_mender = EdgeMender(mesh)
+    new_point_0, new_vertex_0, _, new_vertex_1 = edge_mender._split_edge(
+        mesh.vertices[edge_vertices_to_split],
+    )
+    before_face_indices = set(mesh.faces[face_index].copy().tolist())
+    before_face_count = len(mesh.faces)
+
+    new_face_index = edge_mender._split_face(
+        np.array(edge_vertices_to_split),
+        face_index,
+        edge_mender._get_face_centers(np.array([face_index]))[0],
+        new_point_0,
+        new_vertex_0,
+        new_vertex_1,
+        np.array(ray_1),
+        np.array(ray_2),
+    )
+
+    assert len(mesh.faces) == before_face_count + 1
+    assert new_face_index == before_face_count
+    assert new_face_index != face_index
+    all_new_vertices = np.concatenate(
+        [mesh.faces[face_index], mesh.faces[new_face_index]],
+    )
+    assert before_face_indices.issubset(set(all_new_vertices.tolist()))
+    selected_vertex = (
+        new_vertex_0 if new_vertex_0 in mesh.faces[face_index] else new_vertex_1
+    )
+    assert selected_vertex in mesh.faces[face_index]
+    assert selected_vertex in mesh.faces[new_face_index]
+
+
+@pytest.mark.parametrize(
+    ("mesh", "edge_vertices_to_split", "ray_1", "ray_2", "face_index"),
+    [
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            22,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            24,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            27,  # See test_get_faces_at_edge
+        ),
+        (
+            MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling()),
+            [16, 19],
+            [1, 0, 1],  # See test_get_split_direction_rays
+            [-1, 0, -1],  # See test_get_split_direction_rays
+            55,  # See test_get_faces_at_edge
+        ),
+    ],
+)
+def test_split_face_fail(
+    mesh: trimesh.Trimesh,
+    edge_vertices_to_split: list[int],
+    ray_1: list[int],
+    ray_2: list[int],
+    face_index: int,
+) -> None:
+    """Test that the split_face function properly creates and updates the faces."""
+    edge_mender = EdgeMender(mesh)
+    new_point_0, new_vertex_0, _, new_vertex_1 = edge_mender._split_edge(
+        mesh.vertices[edge_vertices_to_split],
+    )
+
+    with pytest.raises(ValueError, match="Angles are the same"):
+        edge_mender._split_face(
+            np.array(edge_vertices_to_split),
+            face_index,
+            new_point_0,  # This will cause both angles to be the same
+            new_point_0,
+            new_vertex_0,
+            new_vertex_1,
+            np.array(ray_1),
+            np.array(ray_2),
+        )
