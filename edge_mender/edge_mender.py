@@ -122,13 +122,10 @@ class EdgeMender:
         vertices = self.mesh.edges_unique[edges]
 
         # Get the faces for each edge
-        distance_check, edge_index = self.mesh.edges_sorted_tree.query(
+        edge_index = self.mesh.edges_sorted_tree.query(
             vertices,
             k=NON_MANIFOLD_EDGE_FACE_COUNT,
-        )
-        if np.any(distance_check):
-            msg = "Problem with edge face lookup"
-            raise ValueError(msg)
+        )[1]
         faces = edge_index // 3
 
         return faces, vertices, edges
