@@ -78,10 +78,10 @@ class GeometryHelper:
 
     @staticmethod
     def rays_intersect(
-        point_1: NDArray,
-        normal_1: NDArray,
-        point_2: NDArray,
-        normal_2: NDArray,
+        point_a: NDArray,
+        normal_a: NDArray,
+        point_b: NDArray,
+        normal_b: NDArray,
         *,
         tolerance: float = 1e-8,
     ) -> bool:
@@ -114,16 +114,16 @@ class GeometryHelper:
         """
         # Build the linear system
         coefficients = np.array(
-            [[normal_1[0], -normal_2[0]], [normal_1[1], -normal_2[1]]],
+            [[normal_a[0], -normal_b[0]], [normal_a[1], -normal_b[1]]],
         )
         # Difference between ray origins
-        delta = point_2 - point_1
+        delta = point_b - point_a
 
         # Determinant tells whether the directions are linearly dependent
         determinant = np.linalg.det(coefficients)
         if abs(determinant) < tolerance:
             # Use a cross product to check if delta is parallel to the first ray
-            cross_value = np.cross(np.append(normal_1, 0), np.append(delta, 0))
+            cross_value = np.cross(np.append(normal_a, 0), np.append(delta, 0))
             if np.linalg.norm(cross_value) < tolerance:
                 msg = "Colinear"
                 raise ValueError(msg)

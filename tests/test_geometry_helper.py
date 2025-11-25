@@ -96,18 +96,18 @@ def test_rays_intersect(
     if isinstance(expected, bool):
         assert (
             GeometryHelper.rays_intersect(
-                point_1=np.array(point_1),
-                normal_1=np.array(normal_1),
-                point_2=np.array(point_2),
-                normal_2=np.array(normal_2),
+                point_a=np.array(point_1),
+                normal_a=np.array(normal_1),
+                point_b=np.array(point_2),
+                normal_b=np.array(normal_2),
             )
             == expected
         )
     else:
         with pytest.raises(ValueError, match=expected):
             GeometryHelper.rays_intersect(
-                point_1=np.array(point_1),
-                normal_1=np.array(normal_1),
-                point_2=np.array(point_2),
-                normal_2=np.array(normal_2),
+                point_a=np.array(point_1),
+                normal_a=np.array(normal_1),
+                point_b=np.array(point_2),
+                normal_b=np.array(normal_2),
             )

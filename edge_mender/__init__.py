@@ -1,3 +1,5 @@
+"""EdgeMender: A Topology Repair Algorithm for Voxel Boundary Meshes."""
+
 from .data_factory import DataFactory
 from .edge_mender import EdgeMender
 from .geometry_helper import GeometryHelper
