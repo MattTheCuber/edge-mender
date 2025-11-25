@@ -4,6 +4,8 @@ __pycache__/
 dist/
 build/
 .coverage
+.pytest_cache/
+.ruff_cache/
 
 *.stl
 *.obj

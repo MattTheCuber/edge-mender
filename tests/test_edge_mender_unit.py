@@ -1,7 +1,5 @@
 """Test private functions in the EdgeMender class."""
 
-from typing import Literal
-
 import numpy as np
 import pytest
 import trimesh
@@ -62,9 +60,9 @@ def test_get_faces_at_edge(
     faces = edge_mender._get_faces_at_edge(np.array(edge_vertices))
 
     faces.sort()
-    expected_faces = np.array(expected_faces)
-    expected_faces.sort()
-    np.testing.assert_array_equal(faces, expected_faces)
+    e = np.array(expected_faces)
+    e.sort()
+    np.testing.assert_array_equal(faces, e)
 
 
 @pytest.mark.parametrize(
@@ -103,9 +101,9 @@ def test_get_faces_at_vertex(
     faces = edge_mender._get_faces_at_vertex(vertex)
 
     faces.sort()
-    expected_faces = np.array(expected_faces)
-    expected_faces.sort()
-    np.testing.assert_array_equal(faces, expected_faces)
+    e = np.array(expected_faces)
+    e.sort()
+    np.testing.assert_array_equal(faces, e)
 
 
 @pytest.mark.parametrize(
@@ -131,7 +129,7 @@ def test_get_face_centers(
     """Test that the get_face_centers function returns the correct centers."""
     edge_mender = EdgeMender(mesh)
 
-    centers = edge_mender._get_face_centers(faces)
+    centers = edge_mender._get_face_centers(np.array(faces))
 
     np.testing.assert_array_equal(centers, expected_centers)
 

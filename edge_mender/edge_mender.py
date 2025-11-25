@@ -19,7 +19,7 @@ class EdgeMender:
 
     def __init__(self, mesh: trimesh.Trimesh, *, debug: bool = False) -> None:
         self.mesh = mesh
-        self._face_normals: NDArray[np.float64] | None = None
+        self._face_normals: NDArray[np.float64] = np.empty((0, 3), dtype=np.float64)
         """Return the unit normal vector for each face.
 
         If a face is degenerate and a normal can't be generated a zero magnitude unit
@@ -29,7 +29,7 @@ class EdgeMender:
 
         Normal vectors of each face
         """
-        self._vertex_faces: NDArray[np.int64] | None = None
+        self._vertex_faces: NDArray[np.int64] = np.empty((0, 0), dtype=np.int64)
         """A representation of the face indices that correspond to each vertex.
 
         (n,m) int
@@ -633,7 +633,7 @@ class EdgeMender:
         new_vertex: int,
         ray: NDArray,
         opposite_ray: NDArray,
-    ):
+    ) -> None:
         """Reassign the given face to the new vertex based on the angles.
 
         Parameters

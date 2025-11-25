@@ -50,9 +50,12 @@ debug = [
 packages = ["edge_mender"]
 # ext-modules = [{ name = "fastem", sources = ["edge_mender/fast_fixer.pyx"] }]
 
+[tool.ruff]
+exclude = ["edge_mender/Dual_Contouring_Voxel"]
+
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["TD002"]
+ignore = ["TD002", "FIX002", "C901", "PLR0912", "PLR0913", "PLR0915"]
 fixable = ["ALL"]
 unfixable = []
 
