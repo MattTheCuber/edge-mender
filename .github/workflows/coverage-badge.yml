@@ -34,6 +34,7 @@ jobs:
           pytest-xml-coverage-path: ./coverage.xml
           junitxml-path: ./pytest.xml
           hide-comment: true
+          default-branch: master
 
       - name: Update README
         run: |
