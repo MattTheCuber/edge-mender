@@ -201,7 +201,7 @@ def test_has_normals_matching_edge(
     assert (
         edge_mender._has_normals_matching_edge(
             edge_vertex_index,
-            mesh.vertices[edge_vertex_index],
+            edge_mender._get_faces_at_vertex(edge_vertex_index),
             np.array(edge_direction),
         )
         == expected

@@ -242,10 +242,20 @@ class EdgeMender:
                 )
                 self.logger.debug("Edge direction: %s", edge_direction)
 
+                # Find all faces at this vertex
+                faces_at_vertex = self._get_faces_at_vertex(edge_vertex_index)
+                self.logger.debug(
+                    "Vertex %d at %s is connected to %d faces: %s",
+                    edge_vertex_index,
+                    point,
+                    len(faces_at_vertex),
+                    faces_at_vertex,
+                )
+
                 # No floor
                 if not self._has_normals_matching_edge(
                     edge_vertex_index,
-                    point,
+                    faces_at_vertex,
                     edge_direction,
                 ):
                     self.logger.debug("No floor detected")
@@ -284,13 +294,12 @@ class EdgeMender:
                             split_direction * shift_distance
                         )
 
-                    faces_to_reconnect = self._get_faces_at_vertex(edge_vertex_index)
-                    faces_to_reconnect_centers = self._get_face_centers(
-                        faces_to_reconnect,
+                    faces_centers_at_vertex = self._get_face_centers(
+                        faces_at_vertex,
                     )
                     for face_index, face_center in zip(
-                        faces_to_reconnect,
-                        faces_to_reconnect_centers,
+                        faces_at_vertex,
+                        faces_centers_at_vertex,
                         strict=True,
                     ):
                         self._reassign_face(
@@ -431,7 +440,7 @@ class EdgeMender:
     def _has_normals_matching_edge(
         self,
         edge_vertex_index: int,
-        point: NDArray,
+        faces_at_vertex: NDArray,
         edge_direction: NDArray,
     ) -> bool:
         """Check if any face normals at the given vertex match the edge direction.
@@ -440,8 +449,8 @@ class EdgeMender:
         ----------
         edge_vertex_index : int
             The index of the vertex at the edge.
-        point : NDArray
-            The point at the vertex.
+        faces_at_vertex : NDArray
+            The face indices at the vertex.
         edge_direction : NDArray
             The direction vector of the edge.
 
@@ -450,24 +459,13 @@ class EdgeMender:
         bool
             Whether any face normals at the vertex match the edge direction.
         """
-        # Find faces at the vertex
-        faces = self._get_faces_at_vertex(edge_vertex_index)
-        self.logger.debug(
-            "Vertex %d at %s is connected to %d faces: %s",
-            edge_vertex_index,
-            point,
-            len(faces),
-            faces,
-        )
-
         # Find all normals for the connected faces
-        normals = self._face_normals[faces]
+        normals = self._face_normals[faces_at_vertex]
         self.logger.debug(
             "Vertex %d faces have the following normals: %s",
             edge_vertex_index,
             normals,
         )
-
         return GeometryHelper.any_directions_match(edge_direction, normals)
 
     def _get_split_direction(
