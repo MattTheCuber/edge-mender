@@ -29,15 +29,6 @@ class EdgeMender:
 
         Normal vectors of each face
         """
-        self._vertex_faces: NDArray[np.int64] = np.empty((0, 0), dtype=np.int64)
-        """A representation of the face indices that correspond to each vertex.
-
-        (n,m) int
-
-        Each row contains the face indices that correspond to the given vertex,
-        padded with -1 up to the max number of faces corresponding to any one vertex
-        Where n == len(self.vertices), m == max number of faces for a single vertex.
-        """
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
 
@@ -202,10 +193,6 @@ class EdgeMender:
                 self.logger.debug("Skipping edge %d as requested", edge)
                 continue
             self.logger.debug("Processing edge %d", edge)
-
-            # Cache vertex faces
-            self.mesh._cache.delete("vertex_faces")  # noqa: SLF001
-            self._vertex_faces = self.mesh.vertex_faces
 
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
@@ -423,9 +410,8 @@ class EdgeMender:
         NDArray
             An array of face indices.
         """
-        # Get connected faces
-        faces = self._vertex_faces[vertex]
-        return faces[faces != -1]  # remove padding (-1 entries)
+        mask = np.flatnonzero(self.mesh.faces == vertex)
+        return np.unique(mask // self.mesh.faces.shape[1])
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
         """Get the centers of the given face indices.

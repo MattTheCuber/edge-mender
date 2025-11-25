@@ -95,8 +95,6 @@ def test_get_faces_at_vertex(
 ) -> None:
     """Test that the get_faces_at_vertex function returns the correct faces."""
     edge_mender = EdgeMender(mesh)
-    # Cache the vertex faces property
-    edge_mender._vertex_faces = mesh.vertex_faces
 
     faces = edge_mender._get_faces_at_vertex(vertex)
 
@@ -197,8 +195,6 @@ def test_has_normals_matching_edge(
 ) -> None:
     """Test that the has_normals_matching_edge function returns the correct result."""
     edge_mender = EdgeMender(mesh)
-    # Cache the vertex faces property
-    edge_mender._vertex_faces = mesh.vertex_faces
     # Cache face normals
     edge_mender._face_normals = mesh.face_normals
 
