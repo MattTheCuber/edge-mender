@@ -216,6 +216,14 @@ def test_repair_move() -> None:
     assert mesh.vertices[new_vertices].tolist() == [[1.4, 2.5, 1.4], [1.6, 2.5, 1.6]]
 
 
+def test_repair_move_ceiling() -> None:
+    """Test that the repair function works with moving the vertices."""
+    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling())
+    mender = EdgeMender(mesh)
+    new_vertices = mender.repair(move_distance=0.1)[1]
+    assert mesh.vertices[new_vertices].tolist() == [[1.6, 2.0, 1.6], [1.4, 2.0, 1.4]]
+
+
 def test_repair_skip() -> None:
     """Test that the repair function works with skipping edges."""
     mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard())
