@@ -461,23 +461,14 @@ class EdgeMender:
         )
 
         # Find all normals for the connected faces
-        all_normals = self._face_normals[faces]
+        normals = self._face_normals[faces]
         self.logger.debug(
             "Vertex %d faces have the following normals: %s",
             edge_vertex_index,
-            all_normals,
-        )
-        colinear_normals = all_normals[np.all(all_normals == edge_direction, axis=1)]
-        unique_normals = np.unique(colinear_normals, axis=0)
-        self.logger.debug(
-            "Vertex %d faces have the following unique colinear normals: %s",
-            edge_vertex_index,
-            unique_normals,
+            normals,
         )
 
-        # Check if the normals point towards the edge direction
-        dot = np.dot(all_normals, edge_direction)
-        return np.any(dot == 1).item()
+        return GeometryHelper.any_directions_match(edge_direction, normals)
 
     def _get_split_direction(
         self,

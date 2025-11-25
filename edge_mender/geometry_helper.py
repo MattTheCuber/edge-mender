@@ -8,6 +8,25 @@ class GeometryHelper:
     """A class containing helper functions for geometry calculations."""
 
     @staticmethod
+    def any_directions_match(direction: NDArray, test_directions: NDArray) -> bool:
+        """Check whether any of the test directions match the given direction.
+
+        Parameters
+        ----------
+        direction : NDArray
+            The direction to test against.
+        test_directions : NDArray
+            The directions to test.
+
+        Returns
+        -------
+        bool
+            Whether any of the test directions match the given direction.
+        """
+        dot = np.dot(test_directions, direction)
+        return np.any(dot == 1).item()
+
+    @staticmethod
     def is_left(
         line_point: NDArray,
         line_direction: NDArray,

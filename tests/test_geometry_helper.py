@@ -7,6 +7,28 @@ from edge_mender.geometry_helper import GeometryHelper
 
 
 @pytest.mark.parametrize(
+    ("direction", "test_directions", "expected"),
+    [
+        ([1, 0, 0], [[1, 0, 0], [0, 1, 0]], True),
+        ([1, 0, 0], [[-1, 0, 0], [0, 1, 0]], False),
+        ([1, 0, 0], [[0, 1, 0], [0, 0, 1]], False),
+    ],
+)
+def test_any_directions_match(
+    direction: list[int],
+    test_directions: list[list[int]],
+    *,
+    expected: bool,
+) -> None:
+    """Test GeometryHelper.any_directions_match."""
+    result = GeometryHelper.any_directions_match(
+        direction=np.array(direction),
+        test_directions=np.array(test_directions),
+    )
+    assert result == expected
+
+
+@pytest.mark.parametrize(
     ("line_point", "line_direction", "test_point", "expected"),
     [
         ([0, 0], [1, 0], [0, 1], True),
