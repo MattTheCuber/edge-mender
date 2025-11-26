@@ -34,6 +34,23 @@ def test_validate(data: NDArray, spacing: tuple[float, float, float]) -> None:
     mender.validate(spacing=spacing)
 
 
+def test_validate_fail_empty() -> None:
+    """Test that the validate function fails for empty meshes."""
+    mesh = trimesh.Trimesh()
+    mender = EdgeMender(mesh)
+    with pytest.raises(ValueError, match="Mesh is empty"):
+        mender.validate(spacing=(1, 1, 1))
+
+
+def test_validate_fail_volume() -> None:
+    """Test that the validate function fails for non-positive volume."""
+    mesh = trimesh.creation.box()
+    mesh.invert()
+    mender = EdgeMender(mesh)
+    with pytest.raises(ValueError, match="Mesh has non-positive volume"):
+        mender.validate(spacing=(1, 1, 1))
+
+
 def test_validate_fail_normals() -> None:
     """Test that the validate function fails for non-axis-aligned face normals."""
     # Pyramid with non-axis-aligned face normals

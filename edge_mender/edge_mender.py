@@ -53,6 +53,16 @@ class EdgeMender:
         test_mesh = self.mesh.copy()
         test_mesh.vertices /= spacing
 
+        # Check if empty
+        if test_mesh.is_empty:
+            msg = "Mesh is empty."
+            raise ValueError(msg)
+
+        # Check if volume is positive
+        if test_mesh.volume <= 0:
+            msg = "Mesh has non-positive volume."
+            raise ValueError(msg)
+
         # Ensure normals are axis-aligned
         axes = [-1, 0, 1]
         non_axis_aligned_count = np.sum(
