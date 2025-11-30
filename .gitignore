@@ -6,9 +6,11 @@ build/
 .coverage
 .pytest_cache/
 .ruff_cache/
-results*/
 
 *.stl
 *.obj
 *.ipynb
 *.nrrd
+
+data/
+results/
