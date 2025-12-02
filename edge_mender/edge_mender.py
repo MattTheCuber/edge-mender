@@ -135,9 +135,7 @@ class EdgeMender:
         self,
         *,
         shift_distance: float = 0.0,  # should be less than 25% of the voxel size
-        skip_edges: list[int] | None = None,
-        only_edges: list[int] | None = None,
-    ) -> tuple[list[int], list[int], list[list[int]]]:
+    ) -> None:
         """Repair non-manifold edges in the mesh.
 
         Non-manifold edges are defined as edges shared by 4 faces.
@@ -153,26 +151,6 @@ class EdgeMender:
             This will typically only be used for visualization purposes. The value
             should be less than 25% of the voxel size to avoid creating intersecting
             faces.
-        skip_edges : list[int] | None, optional
-            List of edges to skip repairing, by default None
-
-            This is only used for debugging purposes.
-        only_edges : list[int] | None, optional
-            List of edges to repair exclusively, by default None
-
-            This is only used for debugging purposes.
-
-        Returns
-        -------
-        new_faces : list[int]
-            The indices of the faces that were added or modified during the repair
-            process.
-        new_vertices : list[int]
-            The indices of the vertices that were added or modified during the repair
-            process.
-        new_edges : list[list[int]]
-            The indices of the edges that were added or modified during the repair
-            process.
         """
         non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
             self.find_non_manifold_edges()
@@ -187,21 +165,12 @@ class EdgeMender:
         # Track split vertices to avoid double processing
         split_vertices = set()
 
-        new_faces = []
-        new_vertices = []
-
         for original_edge_faces, edge_vertex_indices, edge in zip(
             non_manifold_faces,
             non_manifold_vertices,
             non_manifold_edges,
             strict=True,
         ):
-            if skip_edges and edge in skip_edges:
-                self.logger.debug("Skipping edge %d as requested", edge)
-                continue
-            if only_edges and edge not in only_edges:
-                self.logger.debug("Skipping edge %d as requested", edge)
-                continue
             self.logger.debug("Processing edge %d", edge)
 
             edge_vertex_indices: NDArray
@@ -294,8 +263,6 @@ class EdgeMender:
                     )
 
                     new_point, new_vertex = self._split_point(point, edge_vertex_index)
-                    new_vertices.append(edge_vertex_index)
-                    new_vertices.append(new_vertex)
                     if shift_distance:
                         shift_vertices[edge_vertex_index] = point - (
                             split_direction * shift_distance
@@ -320,7 +287,6 @@ class EdgeMender:
                             new_vertex,
                             split_direction,
                         )
-                        new_faces.append(face_index)
 
                     split_vertices.add(edge_vertex_index)
                 else:
@@ -342,8 +308,6 @@ class EdgeMender:
                 new_point_left, new_vertex_left, new_point_right, new_vertex_right = (
                     self._split_edge(points)
                 )
-                new_vertices.append(new_vertex_left)
-                new_vertices.append(new_vertex_right)
                 if shift_distance:
                     shift_vertices[new_vertex_left] = new_point_left + (
                         split_direction * shift_distance
@@ -359,7 +323,7 @@ class EdgeMender:
                     faces_to_reconnect_centers,
                     strict=True,
                 ):
-                    new_face_index = self._split_face(
+                    self._split_face(
                         edge_vertex_indices,
                         face_index,
                         face_center,
@@ -371,8 +335,6 @@ class EdgeMender:
                     self._face_normals = np.vstack(
                         [self._face_normals, self._face_normals[face_index]],
                     )
-                    new_faces.append(face_index)
-                    new_faces.append(new_face_index)
 
             self.logger.debug("")
 
@@ -385,12 +347,6 @@ class EdgeMender:
                 new_point,
             )
             self.mesh.vertices[vertex_to_shift] = new_point
-
-        return (
-            new_faces,
-            new_vertices,
-            self._get_new_edges(non_manifold_vertices, new_vertices).tolist(),
-        )
 
     def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
         """Get the face indices sharing the given edge vertex indices.
@@ -743,29 +699,3 @@ class EdgeMender:
         self.mesh.faces = np.vstack([self.mesh.faces, new_face_points])
 
         return self.mesh.faces.shape[0] - 1
-
-    def _get_new_edges(
-        self,
-        non_manifold_vertices: NDArray,
-        new_vertices: list[int],
-    ) -> NDArray:
-        """Get the new or updated edges after repairing the mesh.
-
-        Parameters
-        ----------
-        non_manifold_vertices : NDArray
-            The original array of non-manifold vertex indices.
-        new_vertices : list[int]
-            The indices of the new vertices created during the repair.
-
-        Returns
-        -------
-        NDArray
-            The new or updated edges after repairing the mesh.
-        """
-        check = np.hstack([non_manifold_vertices.flatten(), new_vertices])
-        mask = np.isin(self.mesh.edges_sorted[:, 0], check) & np.isin(
-            self.mesh.edges_sorted[:, 1],
-            check,
-        )
-        return self.mesh.edges_sorted[mask]

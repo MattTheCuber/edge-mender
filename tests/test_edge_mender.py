@@ -229,30 +229,16 @@ def test_repair_shift() -> None:
     """Test that the repair function works with shifting the vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion())
     mender = EdgeMender(mesh)
-    new_vertices = mender.repair(shift_distance=0.1)[1]
-    assert mesh.vertices[new_vertices].tolist() == [[1.4, 2.5, 1.4], [1.6, 2.5, 1.6]]
+    non_manifold_vertices = mender.find_non_manifold_edges()[1]
+    mender.repair(shift_distance=0.1)
+    points = mesh.vertices[non_manifold_vertices][0]
+    assert np.isin(points, [1.4, 2.5, 1.4]).all(axis=1).any()
+    assert mesh.vertices[-1].tolist() == [1.6, 2.5, 1.6]
 
 
 def test_repair_shift_ceiling() -> None:
     """Test that the repair function works with shifting the vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.ceiling())
     mender = EdgeMender(mesh)
-    new_vertices = mender.repair(shift_distance=0.1)[1]
-    assert mesh.vertices[new_vertices].tolist() == [[1.6, 2.0, 1.6], [1.4, 2.0, 1.4]]
-
-
-def test_repair_skip() -> None:
-    """Test that the repair function works with skipping edges."""
-    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard())
-    mender = EdgeMender(mesh)
-    mender.repair(skip_edges=[49])
-    assert len(mender.find_non_manifold_edges()[2]) == 1
-
-
-def test_repair_only() -> None:
-    """Test that the repair function works with only selected some edges."""
-    mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.checkerboard())
-    mender = EdgeMender(mesh)
-    num_nmes = len(mender.find_non_manifold_edges()[2])
-    mender.repair(only_edges=[49])
-    assert len(mender.find_non_manifold_edges()[2]) == num_nmes - 1
+    mender.repair(shift_distance=0.1)
+    assert mesh.vertices[-2:].tolist() == [[1.6, 2.0, 1.6], [1.4, 2.0, 1.4]]
