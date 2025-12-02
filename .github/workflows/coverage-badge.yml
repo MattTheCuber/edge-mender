@@ -22,7 +22,7 @@ jobs:
           python-version: 3.13
 
       - name: Install Dependencies
-        run: uv sync --all-extras
+        run: uv sync --extra utils --extra dev
 
       - name: Run Tests
         run: uv run pytest --slow --cov=. --cov-report=xml:coverage.xml --cov-branch

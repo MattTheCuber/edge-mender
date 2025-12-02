@@ -29,7 +29,7 @@ For a walkthrough example, see the [example notebook](example.ipynb).
 
 ## Contributor Instructions
 
-1. Clone the repository using `https://github.com/MattTheCuber/edge-mender.git`
+1. Clone the repository using `git clone https://github.com/MattTheCuber/edge-mender.git`
 2. Initialize the submodule using `git submodule update --init`
 3. [Install uv](https://docs.astral.sh/uv/getting-started/installation)
 4. Create a virtual environment using `uv venv`
