@@ -671,6 +671,7 @@ debug = [
     { name = "networkx" },
     { name = "pynrrd" },
     { name = "trame" },
+    { name = "trame-server" },
     { name = "trame-vtk" },
     { name = "trame-vuetify" },
 ]
@@ -723,6 +724,7 @@ requires-dist = [
     { name = "scipy", marker = "extra == 'test'", specifier = ">=1.16.3" },
     { name = "tqdm", marker = "extra == 'test'", specifier = ">=4.67.1" },
     { name = "trame", marker = "extra == 'debug'", specifier = ">=3.12.0" },
+    { name = "trame-server", marker = "extra == 'debug'", specifier = ">=3.8.1" },
     { name = "trame-vtk", marker = "extra == 'debug'", specifier = ">=2.10.0" },
     { name = "trame-vuetify", marker = "extra == 'debug'", specifier = ">=3.1.0" },
     { name = "trimesh", specifier = ">=4.9.0" },
@@ -1849,6 +1851,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ca/99/4f385683203646e81ad25f1ff880c7d46b2e1843b580bbbeb5a6643ca22d/panda3d-1.10.15-cp313-cp313t-manylinux2014_x86_64.whl", hash = "sha256:db8ad9ff7f48ee1d6b67716124aa8201aa49a92f95b58bb99822208bfbd32a8e", size = 54799011, upload-time = "2024-11-08T11:14:31.397Z" },
     { url = "https://files.pythonhosted.org/packages/40/3e/fde3f06eb2843d9dc4b5cca2ef82888928849215deaeece6ca4be442e1cb/panda3d-1.10.15-cp313-cp313t-win32.whl", hash = "sha256:09f4a52918faa54f53fc523f2f0be84789cbf0432cc380960d8e3e8437b48021", size = 54826671, upload-time = "2024-11-08T11:14:36.186Z" },
     { url = "https://files.pythonhosted.org/packages/1c/f7/318a80225b6785a562b00622db5f7fb2b1f76ab57723908051d1f953d33d/panda3d-1.10.15-cp313-cp313t-win_amd64.whl", hash = "sha256:fa195f2b57a6dd819e81bf13728d00f3973cf4c680245c70d7b669a3317decca", size = 66300865, upload-time = "2024-11-08T11:14:41.995Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/2f/beb5e5ded6469fe681f97b7083e323ecda7b1fa55d3d46845e28c43f1906/panda3d-1.10.15-cp314-cp314-macosx_11_0_universal2.whl", hash = "sha256:878551093ddefd1f5f78974a4692733796a1691ed4ec57ecdf23fe7930421597", size = 120861864, upload-time = "2025-12-01T16:27:31.334Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/4f/e62bddae628d6ee9d63dc8b81d3d7ead5e048a12b1ecd6aacf942d1f21f2/panda3d-1.10.15-cp314-cp314-manylinux2014_x86_64.whl", hash = "sha256:2af5a22e73e8c91bd723d65c3756f296f520a8f8196efe2ea1aae5ac61cf7e36", size = 53981040, upload-time = "2025-12-01T16:27:37.387Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/f4/26b657863fef6c000a036077090c7ab6f8910d9c90a4a188bfba76778d1d/panda3d-1.10.15-cp314-cp314-win_amd64.whl", hash = "sha256:ab9984400e764c22768ea1a0b78c0b8e1352603458801381acaeba721354ff68", size = 69832090, upload-time = "2025-12-01T16:27:41.991Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/41/9e8f083297ac2ea8065bb7d8bb952de10fd35ba082803fcb9291c313b3f4/panda3d-1.10.15-cp314-cp314t-macosx_11_0_universal2.whl", hash = "sha256:bbd2c2b7f87ba64521987197f681357830240eefd7312d4e0985fda1a647c0ba", size = 126687769, upload-time = "2025-12-01T16:27:48.481Z" },
+    { url = "https://files.pythonhosted.org/packages/37/dc/9eb34834a14ba960bd8ea2d2f95d8e33daad562466d7e467a90c1620f26a/panda3d-1.10.15-cp314-cp314t-manylinux2014_x86_64.whl", hash = "sha256:a60dda22ddcc50a159d4e323f8c2c8f57d40a518cb33b27554a1bee2b06b5ff1", size = 54427128, upload-time = "2025-12-01T16:27:53.434Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/87/39201d4b53efbdeeccf4b220d84a9162afb44481d3632decf9de69429dbd/panda3d-1.10.15-cp314-cp314t-win_amd64.whl", hash = "sha256:3532657ce78f63ded9b887c8f9febebb8df2f9be37f32b59347136709f866c9e", size = 69899274, upload-time = "2025-12-01T16:27:58.196Z" },
 ]
 
 [[package]]
@@ -2712,15 +2720,15 @@ wheels = [
 
 [[package]]
 name = "trame-server"
-version = "3.8.0"
+version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "more-itertools" },
     { name = "wslink" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c0/be/305b5bcdfb9f7c1468d3b789fabdc65bc3b6e21739fb1b84bdabc7ce1ec2/trame_server-3.8.0.tar.gz", hash = "sha256:2573ecc1f74994521a60b302a4bd1bff9d48fefbd2fd95ed39245f53c4555242", size = 39408, upload-time = "2025-10-22T17:27:07.767Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/94/7e536b0bada379962268499e2051f5ce49ad1c2b2fd9ac58ae78a63b5f55/trame_server-3.8.1.tar.gz", hash = "sha256:88a2ab18d48664df903f2ef2c93734b96aa0ff51170b93aa3b218be80b70529a", size = 39422, upload-time = "2025-10-30T16:46:01.649Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/1f/4bc17d069b6d3c25cdee35fceff466c627bbeb58f928dd1b7fd04fc52da8/trame_server-3.8.0-py3-none-any.whl", hash = "sha256:fe49214f29edc27b9957275c60c6185c6dd4037fe96eedb795fe5a04e53f07b2", size = 44141, upload-time = "2025-10-22T17:27:06.417Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/14/d99c5a66cef93c4f8f149cd6781dd5c30472bc9350c28a9cee31a1b7d7c8/trame_server-3.8.1-py3-none-any.whl", hash = "sha256:b2a461432c36fcfc0f2d1805a7e766fff59b18155b5c6a1a43e1ab112c5eb2f3", size = 44160, upload-time = "2025-10-30T16:45:59.957Z" },
 ]
 
 [[package]]

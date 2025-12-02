@@ -19,7 +19,7 @@ class Visualizer:
         highlight_edges: list[list[int]] | None = None,
         add_face_normals: bool = False,
         add_face_labels: bool = False,
-        add_vertex_labels: bool = True,
+        add_vertex_labels: bool = False,
         add_edge_labels: bool = False,
         edge_labels: list[str | int] | None = None,
         opacity: float = 1.0,

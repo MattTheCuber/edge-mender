@@ -41,6 +41,7 @@ debug = [
     "ipywidgets>=8.1.7",
     "networkx>=3.5",
     "trame>=3.12.0",
+    "trame-server>=3.8.1",
     "trame-vtk>=2.10.0",
     "trame-vuetify>=3.1.0",
     "fast-simplification>=0.1.12",

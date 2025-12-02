@@ -27,6 +27,10 @@ class MeshGenerator:
 
             itk.Image  # pyright: ignore[reportAttributeAccessIssue]  # noqa: B018
 
+            from itk.CuberillePython import (  # noqa: PLC0415
+                cuberille_image_to_mesh_filter,
+            )
+
             print("ITK Cuberille module loaded.")  # noqa: T201
 
         from itk.CuberillePython import cuberille_image_to_mesh_filter  # noqa: PLC0415
