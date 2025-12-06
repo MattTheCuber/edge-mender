@@ -49,6 +49,11 @@ class EdgeMender:
             If the mesh has faces with angles that aren't 90° or 45°
         ValueError
             If the mesh has non-uniform face areas.
+
+        References
+        ----------
+        .. [1] https://trimesh.org/trimesh.html#trimesh.Trimesh.face_angles
+        .. [2] https://trimesh.org/trimesh.html#trimesh.Trimesh.area_faces
         """
         test_mesh = self.mesh.copy()
         test_mesh.vertices /= spacing
@@ -110,6 +115,10 @@ class EdgeMender:
         ------
         ValueError
             If there is a problem with the edge face lookup.
+
+        References
+        ----------
+        .. [1] https://github.com/mikedh/trimesh/issues/2469
         """
         # Find all unique edges and their face counts
         unique_edges, counts = np.unique(
@@ -131,11 +140,7 @@ class EdgeMender:
 
         return faces, vertices, edges
 
-    def repair(
-        self,
-        *,
-        shift_distance: float = 0.0,  # should be less than 25% of the voxel size
-    ) -> None:
+    def repair(self, *, shift_distance: float = 0.0) -> None:
         """Repair non-manifold edges in the mesh.
 
         Non-manifold edges are defined as edges shared by 4 faces.
@@ -398,6 +403,10 @@ class EdgeMender:
         -------
         NDArray
             The centers of the faces.
+
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Triangle_center
         """
         return np.array(
             np.mean(self.mesh.vertices[self.mesh.faces[face_indices]], axis=1),

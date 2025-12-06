@@ -22,6 +22,11 @@ class GeometryHelper:
         -------
         bool
             Whether any of the test directions match the given direction.
+
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Dot_product
+        .. [2] https://stackoverflow.com/questions/49535295/how-to-check-if-vectors-are-facing-same-direction
         """
         dot = np.dot(test_directions, direction)
         return np.any(dot == 1).item()
@@ -76,6 +81,11 @@ class GeometryHelper:
         ------
         ValueError
             If the test point is on the line.
+
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Cross_product
+        .. [2] https://stackoverflow.com/a/3461533/9725459
         """
         vx, vy = test_point[0] - line_point[0], test_point[1] - line_point[1]
         cross = line_direction[0] * vy - line_direction[1] * vx
@@ -110,6 +120,11 @@ class GeometryHelper:
         ------
         ValueError
             If the test point is equidistant from the ray origin.
+
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Dot_product
+        .. [2] https://math.stackexchange.com/a/1330214/612214
         """
         ray_direction = ray_direction / np.linalg.norm(ray_direction)
         s = np.dot(test_point - ray_origin, ray_direction)
@@ -156,6 +171,13 @@ class GeometryHelper:
             If the rays are parallel and colinear.
         ValueError
             If the rays are parallel but not colinear.
+
+        References
+        ----------
+        .. [1] https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+        .. [2] https://stackoverflow.com/questions/2931573/determining-if-two-rays-intersect
+        .. [3] https://discourse.threejs.org/t/solved-how-to-find-intersection-between-two-rays/6464/8
+        .. [4] https://scicomp.stackexchange.com/questions/36421/how-to-determine-if-2-rays-intersect
         """
         # Build the linear system
         coefficients = np.array(

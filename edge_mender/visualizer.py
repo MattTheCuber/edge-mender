@@ -56,6 +56,13 @@ class Visualizer:
         -------
         pv.Plotter
             The PyVista plotter object used for visualization.
+
+        References
+        ----------
+        .. [1] Sullivan, C., & Kaszynski, A. (2019). PyVista: 3D plotting and mesh
+           analysis through a streamlined interface for the Visualization Toolkit (VTK).
+           Journal of Open Source Software, 4(37), 1450. https://doi.org/10.21105/joss.01450
+        .. [2] https://docs.pyvista.org/api/plotting
         """
         mesh: pv.PolyData = pv.wrap(input_mesh)
         plotter = pv.Plotter()

@@ -20,7 +20,24 @@ class MeshGenerator:
 
     @staticmethod
     def to_mesh_cuberille(data: NDArray) -> trimesh.Trimesh:
-        """Convert a Numpy array to a mesh using Cuberille from ITK."""
+        """Convert a Numpy array to a mesh using Cuberille from ITK.
+
+        Parameters
+        ----------
+        data : NDArray
+            The input 3D numpy array.
+
+        Returns
+        -------
+        trimesh.Trimesh
+            The generated mesh.
+
+        References
+        ----------
+        .. [1] Mueller, D. (2010). Cuberille implicit surface polygonization for ITK.
+           Insight J, 1-9. https://doi.org/10.54294/df9mgw
+        .. [2] https://github.com/InsightSoftwareConsortium/ITKCuberille
+        """
         # Implicitly load ITKCommon module
         if "itk.CuberillePython" not in sys.modules:
             print("Loading ITK Cuberille module. This will take a while...")  # noqa: T201
@@ -67,7 +84,26 @@ class MeshGenerator:
 
     @staticmethod
     def to_mesh_surface_nets(data: NDArray) -> trimesh.Trimesh:
-        """Convert a Numpy array to a mesh using Surface Nets from PyVista/VTK."""
+        """Convert a Numpy array to a mesh using Surface Nets from PyVista/VTK.
+
+        Parameters
+        ----------
+        data : NDArray
+            The input 3D numpy array.
+
+        Returns
+        -------
+        trimesh.Trimesh
+            The generated mesh.
+
+        References
+        ----------
+        .. [1] Schroeder, W., Tsalikis, S., Halle, M., & Frisken, S. (2024). A
+           high-performance surfacenets discrete isocontouring algorithm. arXiv
+           preprint arXiv:2401.14906. https://doi.org/10.48550/arXiv.2401.14906
+        .. [2] https://vtk.org/doc/nightly/html/classvtkSurfaceNets3D.html
+        .. [3] https://docs.pyvista.org/api/core/_autosummary/pyvista.imagedatafilters.contour_labels
+        """
         pv_data: pv.ImageData = pv.wrap(data)  # pyright: ignore[reportAssignmentType]
         mesh = pv_data.contour_labels(output_mesh_type="triangles", smoothing=False)
         faces = mesh.faces.reshape((mesh.n_cells, 4))[:, 1:]
@@ -80,7 +116,26 @@ class MeshGenerator:
 
     @staticmethod
     def to_mesh_dual_contouring(data: NDArray) -> trimesh.Trimesh:
-        """Convert a Numpy array to a mesh using Dual Contouring from Daniel Wilmes."""
+        """Convert a Numpy array to a mesh using Dual Contouring from Daniel Wilmes.
+
+        Parameters
+        ----------
+        data : NDArray
+            The input 3D numpy array.
+
+        Returns
+        -------
+        trimesh.Trimesh
+            The generated mesh.
+
+        References
+        ----------
+        .. [1] Ju, T., Losasso, F., Schaefer, S., & Warren, J. (2002, July). Dual
+           contouring of hermite data. In Proceedings of the 29th annual conference
+           on Computer graphics and interactive techniques (pp. 339-346).
+           https://doi.org/10.1145/566570.566586
+        .. [2] https://github.com/Kryolyz/Dual_Contouring_Voxel
+        """
         # Add the submodule to the path so we can import it
         project_root = Path(__file__).parent / "Dual_Contouring_Voxel"
         if not project_root.exists():  # pragma: no cover
