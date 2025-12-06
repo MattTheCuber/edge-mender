@@ -9,6 +9,7 @@ build/
 
 *.stl
 *.obj
+*.vtk
 *.ipynb
 *.nrrd
 
