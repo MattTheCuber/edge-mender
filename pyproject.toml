@@ -25,6 +25,9 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.3.4", "scipy>=1.16.3", "trimesh>=4.9.0"]
 
+[project.urls]
+Repository = "https://github.com/MattTheCuber/edge-mender"
+
 [project.optional-dependencies]
 utils = [
     "connected-components-3d>=3.26.1",
