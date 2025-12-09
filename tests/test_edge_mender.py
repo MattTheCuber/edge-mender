@@ -211,7 +211,7 @@ def test_find_non_manifold_edges(
         DataFactory.double_tower_ceiling(),
         DataFactory.hanging_points(),
         DataFactory.checkerboard(),
-        # TODO: This test case fails due to a bug with SurfaceNets from VTK
+        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
         # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
         # DataFactory.hole(),  # noqa: ERA001
         DataFactory.kill_you(),
