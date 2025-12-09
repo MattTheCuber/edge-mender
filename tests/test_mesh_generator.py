@@ -1,4 +1,4 @@
-"""Test the DataFactory class."""
+"""Test the MeshGenerator class."""
 
 import pytest
 from numpy.typing import NDArray
