@@ -42,7 +42,7 @@ utils = [
 dev = [
     "edge_mender[utils]",
     "fast-simplification>=0.1.12",
-    "networkx>=3.6",
+    "networkx>=3.6.1",
     "pre-commit>=4.5.0",
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
@@ -54,7 +54,7 @@ examples = [
     "edge_mender[utils]",
     "ipykernel>=7.1.0",
     "ipywidgets>=8.1.8",
-    "networkx>=3.6",
+    "networkx>=3.6.1",
     "trame>=3.12.0",
     "trame-server>=3.8.1",
     "trame-vtk>=2.10.0",

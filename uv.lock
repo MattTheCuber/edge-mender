@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -693,8 +693,8 @@ requires-dist = [
     { name = "itk", marker = "extra == 'utils'", specifier = ">=5.4.5" },
     { name = "itk-cuberille", marker = "extra == 'utils'", specifier = ">=2.7.2" },
     { name = "manifold3d", marker = "extra == 'utils'", specifier = ">=3.3.2" },
-    { name = "networkx", marker = "extra == 'dev'", specifier = ">=3.6" },
-    { name = "networkx", marker = "extra == 'examples'", specifier = ">=3.6" },
+    { name = "networkx", marker = "extra == 'dev'", specifier = ">=3.6.1" },
+    { name = "networkx", marker = "extra == 'examples'", specifier = ">=3.6.1" },
     { name = "nibabel", marker = "extra == 'eval'", specifier = ">=5.3.2" },
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "openpyxl", marker = "extra == 'eval'", specifier = ">=3.1.5" },
@@ -1674,11 +1674,11 @@ wheels = [
 
 [[package]]
 name = "networkx"
-version = "3.6"
+version = "3.6.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e8/fc/7b6fd4d22c8c4dc5704430140d8b3f520531d4fe7328b8f8d03f5a7950e8/networkx-3.6.tar.gz", hash = "sha256:285276002ad1f7f7da0f7b42f004bcba70d381e936559166363707fdad3d72ad", size = 2511464, upload-time = "2025-11-24T03:03:47.158Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/c7/d64168da60332c17d24c0d2f08bdf3987e8d1ae9d84b5bbd0eec2eb26a55/networkx-3.6-py3-none-any.whl", hash = "sha256:cdb395b105806062473d3be36458d8f1459a4e4b98e236a66c3a48996e07684f", size = 2063713, upload-time = "2025-11-24T03:03:45.21Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762", size = 2068504, upload-time = "2025-12-08T17:02:38.159Z" },
 ]
 
 [[package]]
@@ -1838,9 +1838,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1c/f7/318a80225b6785a562b00622db5f7fb2b1f76ab57723908051d1f953d33d/panda3d-1.10.15-cp313-cp313t-win_amd64.whl", hash = "sha256:fa195f2b57a6dd819e81bf13728d00f3973cf4c680245c70d7b669a3317decca", size = 66300865, upload-time = "2024-11-08T11:14:41.995Z" },
     { url = "https://files.pythonhosted.org/packages/dd/2f/beb5e5ded6469fe681f97b7083e323ecda7b1fa55d3d46845e28c43f1906/panda3d-1.10.15-cp314-cp314-macosx_11_0_universal2.whl", hash = "sha256:878551093ddefd1f5f78974a4692733796a1691ed4ec57ecdf23fe7930421597", size = 120861864, upload-time = "2025-12-01T16:27:31.334Z" },
     { url = "https://files.pythonhosted.org/packages/bf/4f/e62bddae628d6ee9d63dc8b81d3d7ead5e048a12b1ecd6aacf942d1f21f2/panda3d-1.10.15-cp314-cp314-manylinux2014_x86_64.whl", hash = "sha256:2af5a22e73e8c91bd723d65c3756f296f520a8f8196efe2ea1aae5ac61cf7e36", size = 53981040, upload-time = "2025-12-01T16:27:37.387Z" },
+    { url = "https://files.pythonhosted.org/packages/33/0d/d281aea6155b75262fcd45d9098a4f4b5530c87331e037a3cd1722698b5d/panda3d-1.10.15-cp314-cp314-win32.whl", hash = "sha256:01372bcdd5ae8157dfa0203b953c37fb4d1178006ae4de6c12af4b984da92584", size = 57068557, upload-time = "2025-12-03T15:14:50.254Z" },
     { url = "https://files.pythonhosted.org/packages/ef/f4/26b657863fef6c000a036077090c7ab6f8910d9c90a4a188bfba76778d1d/panda3d-1.10.15-cp314-cp314-win_amd64.whl", hash = "sha256:ab9984400e764c22768ea1a0b78c0b8e1352603458801381acaeba721354ff68", size = 69832090, upload-time = "2025-12-01T16:27:41.991Z" },
     { url = "https://files.pythonhosted.org/packages/0f/41/9e8f083297ac2ea8065bb7d8bb952de10fd35ba082803fcb9291c313b3f4/panda3d-1.10.15-cp314-cp314t-macosx_11_0_universal2.whl", hash = "sha256:bbd2c2b7f87ba64521987197f681357830240eefd7312d4e0985fda1a647c0ba", size = 126687769, upload-time = "2025-12-01T16:27:48.481Z" },
     { url = "https://files.pythonhosted.org/packages/37/dc/9eb34834a14ba960bd8ea2d2f95d8e33daad562466d7e467a90c1620f26a/panda3d-1.10.15-cp314-cp314t-manylinux2014_x86_64.whl", hash = "sha256:a60dda22ddcc50a159d4e323f8c2c8f57d40a518cb33b27554a1bee2b06b5ff1", size = 54427128, upload-time = "2025-12-01T16:27:53.434Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/e9/68f5535d95223d1b8b04d7c3e4c78c4b06e8739aa2964c49e16d721c401f/panda3d-1.10.15-cp314-cp314t-win32.whl", hash = "sha256:c3565023452d0312469264b02653665940a1a789947a824eadc50796195c57e5", size = 57188239, upload-time = "2025-12-03T15:14:54.918Z" },
     { url = "https://files.pythonhosted.org/packages/8c/87/39201d4b53efbdeeccf4b220d84a9162afb44481d3632decf9de69429dbd/panda3d-1.10.15-cp314-cp314t-win_amd64.whl", hash = "sha256:3532657ce78f63ded9b887c8f9febebb8df2f9be37f32b59347136709f866c9e", size = 69899274, upload-time = "2025-12-01T16:27:58.196Z" },
 ]
 
