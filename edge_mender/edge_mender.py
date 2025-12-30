@@ -8,6 +8,7 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
+from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")
 
@@ -145,17 +146,17 @@ class EdgeMender:
 
         Non-manifold edges are defined as edges shared by 4 faces.
 
-        It accomplishes this by iterating through each non-manifold edge and splitting
-        the vertices or faces as needed to restore manifoldness.
+        It accomplishes this by iterating through each non-manifold edge and
+        splitting the vertices or faces as needed to restore manifoldness.
 
         Parameters
         ----------
         shift_distance : float, optional
             The distance to shift vertices when repairing, by default 0.0
 
-            This will typically only be used for visualization purposes. The value
-            should be less than 25% of the voxel size to avoid creating intersecting
-            faces.
+            This will typically only be used for visualization purposes. The
+            value should be less than 25% of the voxel size to avoid creating
+            intersecting faces.
         """
         non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
             self.find_non_manifold_edges()
@@ -352,6 +353,32 @@ class EdgeMender:
                 new_point,
             )
             self.mesh.vertices[vertex_to_shift] = new_point
+
+    def repair_vertices(self, *, shift_distance: float = 0.0) -> None:
+        """Repair non-manifold vertices in the mesh.
+
+        Non-manifold vertices are defined as as vertices where more than one
+        contiguous group of faces originates.
+
+        It accomplishes this by finding and iterating through each non-manifold
+        vertex, splitting them to restore manifoldness.
+
+        Parameters
+        ----------
+        shift_distance : float, optional
+            The distance to shift vertices when repairing, by default 0.0
+
+            This will typically only be used for visualization purposes. The
+            value should be less than 25% of the voxel size to avoid creating
+            intersecting faces.
+        """
+        self.mesh.vertices = repair_vertices(
+            self.mesh.faces,
+            self.mesh.vertices,
+            self.mesh.vertex_faces,
+            self.mesh.triangles_center,
+            shift_distance=shift_distance,
+        )
 
     def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
         """Get the face indices sharing the given edge vertex indices.
