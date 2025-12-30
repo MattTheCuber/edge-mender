@@ -6,6 +6,7 @@ cimport cython
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.cdivision(True)
 def repair_vertices(
     cnp.ndarray[cnp.int64_t, ndim=2] faces,
     cnp.ndarray[cnp.float64_t, ndim=2] vertices,
@@ -13,120 +14,326 @@ def repair_vertices(
     cnp.ndarray[cnp.float64_t, ndim=2] triangles_center,
     *,
     double shift_distance = 0.0,
-    bint debug = False,
-) -> np.ndarray:
+) -> cnp.ndarray[cnp.float64_t]:
+    """Finds and repairs non-manifold vertices.
+
+    Non-manifold vertices are defined as as vertices where more than one
+    contiguous group of faces originates.
+
+    This algorithm uses a two-step process for performance. The first step is
+    to find the number of new vertices to split, then the new vertices array is
+    initialized. The second step creates the vertex splits, filling the new
+    vertices array and reassigning faces.
+    """
     # Initialize variables
-    cdef Py_ssize_t vertex, i, j
-    cdef int face, test_face, matched_idx
-    cdef int face_v0, face_v1, face_v2, test_v0, test_v1, test_v2
+    # Loop index variables
+    cdef Py_ssize_t vertex, i, j, k
+    # The number of input vertices
+    cdef Py_ssize_t num_vertices = vertex_faces.shape[0]
+    # The maximum number of faces for the input vertices
+    cdef Py_ssize_t num_vertex_faces = vertex_faces.shape[1]
+    # The current and neighbor face indices
+    cdef cnp.int64_t face, neighbor
+    # The current and neighbor face vertex indicies
+    cdef cnp.int64_t f_v0, f_v1, f_v2, n_v0, n_v1, n_v2
 
-    # Build a list of new vertices to add
-    new_vertices: list = []
+    # An array indicated which faces have been visited for the current vertex
+    cdef cnp.uint64_t[::1] visited_faces = (
+        np.zeros(num_vertex_faces, dtype=np.uint64)
+    )
+    # A counter to enable recycling `visited_faces` for each vertex
+    cdef cnp.uint64_t stamp = 0
 
-    # For each vertex
-    for vertex in range(vertex_faces.shape[0]):
-        # Get the faces that use this vertex
-        current_faces = []
-        for i in range(vertex_faces.shape[1]):
-            face = vertex_faces[vertex, i]
-            if face != -1:
-                current_faces.append(face)
+    # A counter for the number of groups found at the current vertex
+    cdef cnp.uint64_t groups = 0
+    # The number of vertices matched between the current and neighbor face
+    # If two vertices match, the test face is a neighbor
+    cdef short matched_vertex_count = 0
 
-        if debug:
-            print(f"Analyzing vertex {vertex} with faces {current_faces}")
+    # The number of vertex splits that will need to be made
+    cdef long num_split_vertices = 0
 
-        # Intialize the chains of connected faces
-        face_groups: list[list[int]] = []
+    # Step 1: Find the number of new vertices to split
+    with nogil:
+        # For each vertex
+        for vertex in range(num_vertices):
+            # Increase stamp counter and reset group count for this vertex
+            stamp += 1
+            groups = 0
 
-        # While there are still faces to process
-        while current_faces:
-            # Start a new face group
-            face = current_faces.pop()
-            group = [face]
-            face_groups.append(group)
-            if debug:
-                print(f"  Started new face group with face {face}")
+            # For each face at this vertex
+            for i in range(num_vertex_faces):
+                # Get the global face index
+                face = vertex_faces[vertex, i]
 
-            # Find all connected faces in the chain
-            while True:
-                # Retrieve the 3 vertices of the current face
-                face_v0 = faces[face, 0]
-                face_v1 = faces[face, 1]
-                face_v2 = faces[face, 2]
+                # Skip padding or already processed faces
+                if face == -1 or visited_faces[i] == stamp:
+                    continue
 
-                # Find a neighboring face
-                matched_idx = -1
-                for j in range(len(current_faces)):
-                    test_face = current_faces[j]
-                    test_v0 = faces[test_face, 0]
-                    test_v1 = faces[test_face, 1]
-                    test_v2 = faces[test_face, 2]
+                # Create a new group
+                groups += 1
 
-                    # Count shared vertices
-                    count = 0
-                    if face_v0 == test_v0 or face_v0 == test_v1 or face_v0 == test_v2:
-                        count += 1
-                    if face_v1 == test_v0 or face_v1 == test_v1 or face_v1 == test_v2:
-                        count += 1
-                    if face_v2 == test_v0 or face_v2 == test_v1 or face_v2 == test_v2:
-                        count += 1
+                # Mark face as visited
+                visited_faces[i] = stamp
 
-                    # If they share more than one vertex, they are connected
-                    if count > 1:
-                        matched_idx = j
+                # If more than one group, we have a non-manifold vertex
+                if groups > 1:
+                    # We will need to split this vertex for this new group
+                    num_split_vertices += 1
+
+                # Retrieve the 3 vertex indicies of the current face
+                f_v0 = faces[face, 0]
+                f_v1 = faces[face, 1]
+                f_v2 = faces[face, 2]
+
+                # Find faces in chain
+                for j in range(num_vertex_faces):
+                    # Find neighbor face to the current face
+                    for k in range(num_vertex_faces):
+                        neighbor = vertex_faces[vertex, k]
+
+                        # Skip padding or already processed faces
+                        if neighbor == -1 or visited_faces[k] == stamp:
+                            continue
+
+                        # Retrieve the three vertices of the neighbor face
+                        n_v0 = faces[neighbor, 0]
+                        n_v1 = faces[neighbor, 1]
+                        n_v2 = faces[neighbor, 2]
+
+                        # Count shared vertices
+                        matched_vertex_count = (
+                            (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) + 
+                            (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) + 
+                            (f_v2 == n_v0) + (f_v2 == n_v1) + (f_v2 == n_v2)
+                        )
+
+                        # If they share more than one vertex, they are connected
+                        if matched_vertex_count > 1:
+                            # Mark neighbor as visited
+                            visited_faces[k] = stamp
+
+                            # Change current face to neighbor
+                            face = neighbor
+                            f_v0 = n_v0
+                            f_v1 = n_v1
+                            f_v2 = n_v2
+
+                            # Break out of this inner loop to begin searching
+                            # through the faces again for the new neighbor
+                            break
+
+                    # Finish chain if no more connected faces
+                    if matched_vertex_count < 2:
                         break
 
-                if matched_idx < 0:
-                    break
+    # Initialize variables for second pass
+    # The new vertices array created by this algorithm by splitting non-manifold
+    # vertices
+    cdef cnp.float64_t[:, ::1] new_vertices = (
+        np.zeros((num_split_vertices, 3), dtype=np.float64)
+    )
+    # The current new vertex index counter for face reassignment
+    cdef cnp.int64_t new_vertex_index
+    # An array to track which faces are part of the current group for face
+    # reassignment and shifting
+    cdef cnp.uint64_t[::1] group_faces = (
+        np.zeros(num_vertex_faces, dtype=np.uint64)
+    )
+    # The current vertex original location 
+    cdef cnp.float64_t v0, v1, v2
 
-                face = current_faces.pop(matched_idx)
-                group.append(face)
-                if debug:
-                    print(f"    Added neighbor face {face} to group")
+    # Shifting specific variables
+    # The number of faces in the current group
+    cdef cnp.uint64_t num_group_faces
+    # The sum of the vertex coordinates, used to find the mean when shifting
+    # later
+    cdef cnp.float64_t group_sum_v0, group_sum_v1, group_sum_v2
+    # The differences from the group faces mean to the original vertex location
+    # Used to know which direction to shift
+    cdef cnp.float64_t diff_v0, diff_v1, diff_v2
+    # The number of visited faces counter for checking whether this is the last
+    # group
+    cdef cnp.int64_t num_visited_faces
 
-        # If there are multiple face groups, we need to split
-        if len(face_groups) > 1:
-            if debug:
-                print(
-                    f"  Vertex {vertex} has {len(face_groups)} face groups, fixing...",
-                )
+    # Reset variables for second pass
+    for i in range(num_vertex_faces):
+        visited_faces[i] = 0
+    stamp = 0
+    groups = 0
+    matched_vertex_count = 0
+    num_split_vertices = 0
 
-                print(f"    Keeping vertex {vertex} for face group {face_groups[0]}")
+    # Step 2: Create the vertex splits, filling the new vertices array and
+    # reassigning faces
+    with nogil:
+        # For each vertex
+        for vertex in range(num_vertices):
+            # Increase stamp counter and reset group count for this vertex
+            stamp += 1
+            groups = 0
 
-            # For each additional face group
-            for face_group in face_groups[1:]:
-                # Create a new vertex
-                new_vertex = vertices[vertex].copy()
-                new_vertices.append(new_vertex)
-                new_vertex_index = len(vertices) + len(new_vertices) - 1
+            # Store the vertex coordinates
+            v0 = vertices[vertex, 0]
+            v1 = vertices[vertex, 1]
+            v2 = vertices[vertex, 2]
 
-                # Optionally shift the new vertex
+            # For each face at this vertex
+            for i in range(num_vertex_faces):
+                # Get the global face index
+                face = vertex_faces[vertex, i]
+
+                # Skip padding or already processed faces
+                if face == -1 or visited_faces[i] == stamp:
+                    continue
+
+                # Create a new group
+                groups += 1
+                for j in range(num_vertex_faces):
+                    group_faces[j] = 0
+
+                # Mark face as part of this group
+                group_faces[i] = 1
+
+                # Mark face as visited
+                visited_faces[i] = stamp
+
+                # Store the initial group shift information
                 if shift_distance:
-                    mean_position = np.mean(triangles_center[face_group], axis=0)
-                    new_vertex[:] += shift_distance * np.sign(
-                        mean_position - vertices[vertex],
-                    )
+                    num_group_faces = 1
+                    group_sum_v0 = triangles_center[face, 0]
+                    group_sum_v1 = triangles_center[face, 1]
+                    group_sum_v2 = triangles_center[face, 2]
 
-                # Update the faces to use the new vertex
-                for face in face_group:
-                    if faces[face, 0] == vertex:
-                        faces[face, 0] = new_vertex_index
-                    elif faces[face, 1] == vertex:
-                        faces[face, 1] = new_vertex_index
-                    elif faces[face, 2] == vertex:
-                        faces[face, 2] = new_vertex_index
+                # If more than one group, we have a non-manifold vertex
+                if groups > 1:
+                    # We will need to split this vertex for this new group
+                    num_split_vertices += 1
 
-                if debug:
-                    print(
-                        f"    Created new vertex {new_vertex_index} for face group {face_group}",
-                    )
+                # Retrieve the three vertex indicies of the current face
+                f_v0 = faces[face, 0]
+                f_v1 = faces[face, 1]
+                f_v2 = faces[face, 2]
 
-            # Optionally shift the original vertex
-            if shift_distance:
-                mean_position = np.mean(triangles_center[face_groups[0]], axis=0)
-                vertices[vertex] += shift_distance * np.sign(
-                    mean_position - vertices[vertex],
-                )
+                # Find faces in chain
+                for j in range(num_vertex_faces):
+                    # Find neighbor face to the current face
+                    for k in range(num_vertex_faces):
+                        neighbor = vertex_faces[vertex, k]
+
+                        # Skip padding or already processed faces
+                        if neighbor == -1 or visited_faces[k] == stamp:
+                            continue
+
+                        # Retrieve the 3 vertices of the neighbor face
+                        n_v0 = faces[neighbor, 0]
+                        n_v1 = faces[neighbor, 1]
+                        n_v2 = faces[neighbor, 2]
+
+                        # Count shared vertices
+                        matched_vertex_count = (
+                            (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) + 
+                            (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) + 
+                            (f_v2 == n_v0) + (f_v2 == n_v1) + (f_v2 == n_v2)
+                        )
+
+                        # If they share more than one vertex, they are connected
+                        if matched_vertex_count > 1:
+                            # Add the face shift information
+                            if shift_distance:
+                                num_group_faces += 1
+                                group_sum_v0 += triangles_center[neighbor, 0]
+                                group_sum_v1 += triangles_center[neighbor, 1]
+                                group_sum_v2 += triangles_center[neighbor, 2]
+
+                            # Mark face as part of this group
+                            group_faces[k] = 1
+
+                            # Mark neighbor as visited
+                            visited_faces[k] = stamp
+
+                            # Change current face to neighbor
+                            face = neighbor
+                            f_v0 = n_v0
+                            f_v1 = n_v1
+                            f_v2 = n_v2
+
+                            # Break out of this inner loop to begin searching
+                            # through the faces again for the new neighbor
+                            break
+
+                    # Finish chain if no more connected faces
+                    if matched_vertex_count < 2 or k == num_vertex_faces - 1:
+                        # If more than one group, we have a non-manifold vertex,
+                        # split
+                        if groups > 1:
+                            # Create a new vertex
+                            new_vertices[num_split_vertices - 1, 0] = v0
+                            new_vertices[num_split_vertices - 1, 1] = v1
+                            new_vertices[num_split_vertices - 1, 2] = v2
+                            new_vertex_index = (
+                                num_vertices + num_split_vertices - 1
+                            )
+
+                            # Update all faces in this group to use the new
+                            # vertex
+                            for k in range(num_vertex_faces):
+                                if group_faces[k]:
+                                    neighbor = vertex_faces[vertex, k]
+                                    # Update the face to use the new vertex
+                                    if faces[neighbor, 0] == vertex:
+                                        faces[neighbor, 0] = new_vertex_index
+                                    elif faces[neighbor, 1] == vertex:
+                                        faces[neighbor, 1] = new_vertex_index
+                                    elif faces[neighbor, 2] == vertex:
+                                        faces[neighbor, 2] = new_vertex_index
+
+                        # Shift the new vertex
+                        if shift_distance:
+                            # Get the shift differences
+                            diff_v0 = group_sum_v0 / num_group_faces - v0
+                            diff_v1 = group_sum_v1 / num_group_faces - v1
+                            diff_v2 = group_sum_v2 / num_group_faces - v2
+                            # If this is the first group, update the original
+                            # vertex
+                            if groups == 1:
+                                # Only update if not all faces are in this group
+                                # (aka, this is a manifold vertex)
+                                num_visited_faces = 0
+                                for k in range(num_vertex_faces):
+                                    if (
+                                        vertex_faces[vertex, k] == -1
+                                        or visited_faces[k] == stamp
+                                    ):
+                                        num_visited_faces += 1
+
+                                if num_visited_faces < num_vertex_faces:
+                                    vertices[vertex, 0] += shift_distance * (
+                                        1 if diff_v0 > 0 else -1 if diff_v0 < 0 else 0
+                                    )
+                                    vertices[vertex, 1] += shift_distance * (
+                                        1 if diff_v1 > 0 else -1 if diff_v1 < 0 else 0
+                                    )
+                                    vertices[vertex, 2] += shift_distance * (
+                                        1 if diff_v2 > 0 else -1 if diff_v2 < 0 else 0
+                                    )
+                            # Otherwise, update the new vertex
+                            else:
+                                new_vertices[num_split_vertices - 1, 0] += (
+                                    shift_distance
+                                    * (1 if diff_v0 > 0 else -1 if diff_v0 < 0 else 0)
+                                )
+                                new_vertices[num_split_vertices - 1, 1] += (
+                                    shift_distance
+                                    * (1 if diff_v1 > 0 else -1 if diff_v1 < 0 else 0)
+                                )
+                                new_vertices[num_split_vertices - 1, 2] += (
+                                    shift_distance
+                                    * (1 if diff_v2 > 0 else -1 if diff_v2 < 0 else 0)
+                                )
+
+                        # Chain is finished, search for next unvisited face
+                        break
 
     # Return the updated vertices array
     return np.vstack([vertices, np.asarray(new_vertices, dtype=vertices.dtype)])
