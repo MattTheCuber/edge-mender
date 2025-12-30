@@ -70,6 +70,11 @@ eval = [
 [tool.setuptools]
 packages = ["edge_mender"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:builtin type (SwigPyPacked|SwigPyObject|swigvarlink) has no __module__ attribute:DeprecationWarning",
+]
+
 [tool.ruff]
 exclude = ["edge_mender/Dual_Contouring_Voxel"]
 
