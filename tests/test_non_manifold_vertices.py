@@ -7,9 +7,7 @@ from numpy.typing import NDArray
 from edge_mender.data_factory import DataFactory
 from edge_mender.edge_mender import EdgeMender
 from edge_mender.mesh_generator import MeshGenerator
-from edge_mender.non_manifold_vertices import (
-    has_non_manifold_vertices,  # pyright: ignore[reportAttributeAccessIssue]
-)
+from edge_mender.non_manifold_vertices import find_num_non_manifold_vertices
 
 
 def test_has_non_manifold_vertices_basic() -> None:
@@ -20,35 +18,37 @@ def test_has_non_manifold_vertices_basic() -> None:
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
 
-    assert has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+    assert (
+        find_num_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces) == 1
+    )
 
 
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        (DataFactory.simple_extrusion(), False),
-        (DataFactory.double_extrusion(), False),
-        (DataFactory.triple_extrusion(), False),
-        (DataFactory.stairs(), False),
-        (DataFactory.ceiling(), False),
-        (DataFactory.double_tower_ceiling(), False),
-        (DataFactory.hanging_points(), False),
-        (DataFactory.checkerboard(), True),
+        (DataFactory.simple_extrusion(), 0),
+        (DataFactory.double_extrusion(), 0),
+        (DataFactory.triple_extrusion(), 0),
+        (DataFactory.stairs(), 0),
+        (DataFactory.ceiling(), 0),
+        (DataFactory.double_tower_ceiling(), 0),
+        (DataFactory.hanging_points(), 0),
+        (DataFactory.checkerboard(), 1),
         # NOTE: This test case fails due to a bug with SurfaceNets from VTK
         # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
         # (DataFactory.hole(), False),  # noqa: ERA001
-        (DataFactory.kill_you(), True),
+        (DataFactory.kill_you(), 1),
     ],
 )
-def test_has_non_manifold_vertices(data: NDArray, *, expected: bool) -> None:
+def test_has_non_manifold_vertices(data: NDArray, expected: int) -> None:
     """Test that the repair algorithm finds non-manifold vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
 
     assert (
-        has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
-        is expected
+        find_num_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+        == expected
     )
 
 
@@ -63,7 +63,9 @@ def test_repair_non_manifold_vertices_basic(shift_distance: float) -> None:
 
     mender.repair_vertices(shift_distance=shift_distance)
 
-    assert not has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+    assert (
+        find_num_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces) == 0
+    )
 
 
 @pytest.mark.parametrize("shift_distance", [0.0, 0.1])
@@ -92,4 +94,6 @@ def test_repair_non_manifold_vertices(data: NDArray, shift_distance: float) -> N
 
     mender.repair_vertices(shift_distance=shift_distance)
 
-    assert not has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+    assert (
+        find_num_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces) == 0
+    )

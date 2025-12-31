@@ -7,17 +7,17 @@ cimport cython
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def has_non_manifold_vertices(
+def find_num_non_manifold_vertices(
     cnp.ndarray[cnp.int64_t, ndim=2] faces,
     cnp.ndarray[cnp.int64_t, ndim=2] vertex_faces,
-) -> bool:
-    """Return whether the mesh has non-manifold vertices."""
-    cdef long num_split_vertices = find_num_split_vertices(
+) -> long:
+    """Return the number of non-manifold vertices."""
+    return find_num_split_vertices(
         faces,
         vertex_faces,
         np.zeros(vertex_faces.shape[1], dtype=np.uint64),
+        return_split_count=False
     )
-    return num_split_vertices > 0
 
 
 @cython.boundscheck(False)
@@ -27,6 +27,7 @@ cdef long find_num_split_vertices(
     const cnp.int64_t[:, ::1] faces,
     const cnp.int64_t[:, ::1] vertex_faces,
     cnp.uint64_t[::1] visited_faces,
+    bint return_split_count = True,
 ) nogil:
     """Finds non-manifold vertices and counts the number of splits to repair.
 
@@ -82,6 +83,11 @@ cdef long find_num_split_vertices(
             if groups > 1:
                 # We will need to split this vertex for this new group
                 num_split_vertices += 1
+
+                # If we only want the number of vertices to split, break before
+                # finding the number of unique groups at the vertex
+                if not return_split_count:
+                    break
 
             # Retrieve the 3 vertex indicies of the current face
             f_v0 = faces[face, 0]
