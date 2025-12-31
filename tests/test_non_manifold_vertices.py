@@ -24,17 +24,32 @@ def test_has_non_manifold_vertices_basic() -> None:
 
 
 @pytest.mark.parametrize(
-    "data",
+    ("data", "expected"),
     [
-        DataFactory.checkerboard(),
+        (DataFactory.simple_extrusion(), False),
+        (DataFactory.double_extrusion(), False),
+        (DataFactory.triple_extrusion(), False),
+        (DataFactory.stairs(), False),
+        (DataFactory.ceiling(), False),
+        (DataFactory.double_tower_ceiling(), False),
+        (DataFactory.hanging_points(), False),
+        (DataFactory.checkerboard(), True),
+        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
+        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
+        # (DataFactory.hole(), False),  # noqa: ERA001
+        (DataFactory.kill_you(), True),
     ],
 )
-def test_has_non_manifold_vertices(data: NDArray) -> None:
+def test_has_non_manifold_vertices(data: NDArray, *, expected: bool) -> None:
     """Test that the repair algorithm finds non-manifold vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
+    mender.repair()
 
-    assert has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+    assert (
+        has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
+        is expected
+    )
 
 
 def test_repair_non_manifold_vertices_basic() -> None:
@@ -53,14 +68,14 @@ def test_repair_non_manifold_vertices_basic() -> None:
 @pytest.mark.parametrize(
     "data",
     [
-        DataFactory.simple_extrusion(),
-        DataFactory.double_extrusion(),
-        DataFactory.triple_extrusion(),
-        DataFactory.stairs(),
-        DataFactory.ceiling(),
-        DataFactory.double_tower_ceiling(),
-        DataFactory.hanging_points(),
-        DataFactory.checkerboard(),  # This is the only one with non-manifold vertices
+        DataFactory.simple_extrusion(),  # This has no non-manifold vertices
+        DataFactory.double_extrusion(),  # This has no non-manifold vertices
+        DataFactory.triple_extrusion(),  # This has no non-manifold vertices
+        DataFactory.stairs(),  # This has no non-manifold vertices
+        DataFactory.ceiling(),  # This has no non-manifold vertices
+        DataFactory.double_tower_ceiling(),  # This has no non-manifold vertices
+        DataFactory.hanging_points(),  # This has no non-manifold vertices
+        DataFactory.checkerboard(),
         # NOTE: This test case fails due to a bug with SurfaceNets from VTK
         # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
         # DataFactory.hole(),  # noqa: ERA001

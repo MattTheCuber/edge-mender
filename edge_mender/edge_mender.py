@@ -357,6 +357,8 @@ class EdgeMender:
     def repair_vertices(self, *, shift_distance: float = 0.0) -> None:
         """Repair non-manifold vertices in the mesh.
 
+        Requires all non-manifold edges to have already been repaired.
+
         Non-manifold vertices are defined as as vertices where more than one
         contiguous group of faces originates.
 
