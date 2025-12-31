@@ -197,7 +197,7 @@ def repair_vertices(
         visited_faces[i] = 0
     # The number of visited faces counter for checking whether this is the last
     # group
-    cdef cnp.int64_t num_visited_faces = 0
+    cdef cnp.int64_t num_visited_faces
 
     # The new vertices array created by this algorithm by splitting non-manifold
     # vertices
@@ -234,7 +234,6 @@ def repair_vertices(
             # Increase stamp counter and reset group count for this vertex
             stamp += 1
             groups = 0
-            num_visited_faces = 0
 
             # Store the vertex coordinates
             v0 = vertices[vertex, 0]
@@ -260,7 +259,6 @@ def repair_vertices(
 
                 # Mark face as visited
                 visited_faces[i] = stamp
-                num_visited_faces += 1
 
                 # Store the initial group shift information
                 if shift_distance:
@@ -315,7 +313,6 @@ def repair_vertices(
 
                             # Mark neighbor as visited
                             visited_faces[k] = stamp
-                            num_visited_faces += 1
 
                             # Change current face to neighbor
                             face = neighbor
@@ -326,6 +323,15 @@ def repair_vertices(
                             # Break out of this inner loop to begin searching
                             # through the faces again for the new neighbor
                             break
+
+                    # Count the number of visited faces
+                    num_visited_faces = 0
+                    for k in range(num_vertex_faces):
+                        if (
+                            vertex_faces[vertex, k] == -1
+                            or visited_faces[k] == stamp
+                        ):
+                            num_visited_faces += 1
 
                     # Finish chain if no more connected faces
                     if (
