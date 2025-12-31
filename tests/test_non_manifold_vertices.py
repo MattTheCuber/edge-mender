@@ -52,7 +52,8 @@ def test_has_non_manifold_vertices(data: NDArray, *, expected: bool) -> None:
     )
 
 
-def test_repair_non_manifold_vertices_basic() -> None:
+@pytest.mark.parametrize("shift_distance", [0.0, 0.1])
+def test_repair_non_manifold_vertices_basic(shift_distance: float) -> None:
     """Test that the repair function works for a basic test case."""
     data = np.zeros((4, 4, 4))
     data[1, 1, 1] = 1
@@ -60,11 +61,12 @@ def test_repair_non_manifold_vertices_basic() -> None:
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
 
-    mender.repair_vertices()
+    mender.repair_vertices(shift_distance=shift_distance)
 
     assert not has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
 
 
+@pytest.mark.parametrize("shift_distance", [0.0, 0.1])
 @pytest.mark.parametrize(
     "data",
     [
@@ -82,12 +84,12 @@ def test_repair_non_manifold_vertices_basic() -> None:
         DataFactory.kill_you(),
     ],
 )
-def test_repair_non_manifold_vertices(data: NDArray) -> None:
+def test_repair_non_manifold_vertices(data: NDArray, shift_distance: float) -> None:
     """Test that the repair function works for the test cases."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
 
-    mender.repair_vertices()
+    mender.repair_vertices(shift_distance=shift_distance)
 
     assert not has_non_manifold_vertices(mender.mesh.faces, mender.mesh.vertex_faces)
