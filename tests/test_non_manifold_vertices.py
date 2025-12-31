@@ -53,7 +53,18 @@ def test_repair_non_manifold_vertices_basic() -> None:
 @pytest.mark.parametrize(
     "data",
     [
-        DataFactory.checkerboard(),
+        DataFactory.simple_extrusion(),
+        DataFactory.double_extrusion(),
+        DataFactory.triple_extrusion(),
+        DataFactory.stairs(),
+        DataFactory.ceiling(),
+        DataFactory.double_tower_ceiling(),
+        DataFactory.hanging_points(),
+        DataFactory.checkerboard(),  # This is the only one with non-manifold vertices
+        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
+        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
+        # DataFactory.hole(),  # noqa: ERA001
+        DataFactory.kill_you(),
     ],
 )
 def test_repair_non_manifold_vertices(data: NDArray) -> None:

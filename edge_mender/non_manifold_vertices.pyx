@@ -105,8 +105,8 @@ cdef long find_num_split_vertices(
 
                     # Count shared vertices
                     matched_vertex_count = (
-                        (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) + 
-                        (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) + 
+                        (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) +
+                        (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) +
                         (f_v2 == n_v0) + (f_v2 == n_v1) + (f_v2 == n_v2)
                     )
 
@@ -183,9 +183,15 @@ def repair_vertices(
         vertex_faces,
         visited_faces,
     )
+    # If no non-manifold vertices found, return original vertices
+    if num_split_vertices == 0:
+        return vertices
     # Reset the visited faces array
     for i in range(num_vertex_faces):
         visited_faces[i] = 0
+    # The number of visited faces counter for checking whether this is the last
+    # group
+    cdef cnp.int64_t num_visited_faces = 0
 
     # The new vertices array created by this algorithm by splitting non-manifold
     # vertices
@@ -201,7 +207,7 @@ def repair_vertices(
     cdef cnp.uint64_t[::1] group_faces = (
         np.zeros(num_vertex_faces, dtype=np.uint64)
     )
-    # The current vertex original location 
+    # The current vertex original location
     cdef cnp.float64_t v0, v1, v2
 
     # Shifting specific variables
@@ -213,9 +219,6 @@ def repair_vertices(
     # The differences from the group faces mean to the original vertex location
     # Used to know which direction to shift
     cdef cnp.float64_t diff_v0, diff_v1, diff_v2
-    # The number of visited faces counter for checking whether this is the last
-    # group
-    cdef cnp.int64_t num_visited_faces
 
     # Step 2: Create the vertex splits, filling the new vertices array and
     # reassigning faces
@@ -225,6 +228,7 @@ def repair_vertices(
             # Increase stamp counter and reset group count for this vertex
             stamp += 1
             groups = 0
+            num_visited_faces = 0
 
             # Store the vertex coordinates
             v0 = vertices[vertex, 0]
@@ -250,6 +254,7 @@ def repair_vertices(
 
                 # Mark face as visited
                 visited_faces[i] = stamp
+                num_visited_faces += 1
 
                 # Store the initial group shift information
                 if shift_distance:
@@ -285,8 +290,8 @@ def repair_vertices(
 
                         # Count shared vertices
                         matched_vertex_count = (
-                            (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) + 
-                            (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) + 
+                            (f_v0 == n_v0) + (f_v0 == n_v1) + (f_v0 == n_v2) +
+                            (f_v1 == n_v0) + (f_v1 == n_v1) + (f_v1 == n_v2) +
                             (f_v2 == n_v0) + (f_v2 == n_v1) + (f_v2 == n_v2)
                         )
 
@@ -304,6 +309,7 @@ def repair_vertices(
 
                             # Mark neighbor as visited
                             visited_faces[k] = stamp
+                            num_visited_faces += 1
 
                             # Change current face to neighbor
                             face = neighbor
@@ -316,7 +322,10 @@ def repair_vertices(
                             break
 
                     # Finish chain if no more connected faces
-                    if matched_vertex_count < 2 or k == num_vertex_faces - 1:
+                    if (
+                        matched_vertex_count < 2
+                        or num_visited_faces == num_vertex_faces
+                    ):
                         # If more than one group, we have a non-manifold vertex,
                         # split
                         if groups > 1:
@@ -352,14 +361,6 @@ def repair_vertices(
                             if groups == 1:
                                 # Only update if not all faces are in this group
                                 # (aka, this is a manifold vertex)
-                                num_visited_faces = 0
-                                for k in range(num_vertex_faces):
-                                    if (
-                                        vertex_faces[vertex, k] == -1
-                                        or visited_faces[k] == stamp
-                                    ):
-                                        num_visited_faces += 1
-
                                 if num_visited_faces < num_vertex_faces:
                                     vertices[vertex, 0] += shift_distance * (
                                         1 if diff_v0 > 0 else -1 if diff_v0 < 0 else 0
