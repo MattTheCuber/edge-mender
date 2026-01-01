@@ -10,7 +10,7 @@ cimport cython
 def find_num_non_manifold_vertices(
     cnp.ndarray[cnp.int64_t, ndim=2] faces,
     cnp.ndarray[cnp.int64_t, ndim=2] vertex_faces,
-) -> long:
+) -> int:
     """Return the number of non-manifold vertices."""
     return find_num_split_vertices(
         faces,
@@ -89,13 +89,16 @@ cdef long find_num_split_vertices(
                 if not return_split_count:
                     break
 
-            # Retrieve the 3 vertex indicies of the current face
+            # Retrieve the three vertex indicies of the current face
             f_v0 = faces[face, 0]
             f_v1 = faces[face, 1]
             f_v2 = faces[face, 2]
 
             # Find faces in chain
             for j in range(num_vertex_faces):
+                # Reset matched vertex count for this search iteration
+                matched_vertex_count = 0
+
                 # Find neighbor face to the current face
                 for k in range(num_vertex_faces):
                     neighbor = vertex_faces[vertex, k]
@@ -210,8 +213,8 @@ def repair_vertices(
     cdef cnp.int64_t new_vertex_index
     # An array to track which faces are part of the current group for face
     # reassignment and shifting
-    cdef cnp.uint64_t[::1] group_faces = (
-        np.zeros(num_vertex_faces, dtype=np.uint64)
+    cdef cnp.uint8_t[::1] group_faces = (
+        np.zeros(num_vertex_faces, dtype=np.uint8)
     )
     # The current vertex original location
     cdef cnp.float64_t v0, v1, v2
@@ -271,6 +274,13 @@ def repair_vertices(
                 if groups > 1:
                     # We will need to split this vertex for this new group
                     current_split_vertex_index += 1
+                    if current_split_vertex_index > num_split_vertices:
+                        with gil:
+                            msg = (
+                                "Error processing mesh. Perhaps you forgot to "
+                                "repair non-manifold edges first?"
+                            )
+                            raise ValueError(msg)
 
                 # Retrieve the three vertex indicies of the current face
                 f_v0 = faces[face, 0]
@@ -279,6 +289,9 @@ def repair_vertices(
 
                 # Find faces in chain
                 for j in range(num_vertex_faces):
+                    # Reset matched vertex count for this search iteration
+                    matched_vertex_count = 0
+
                     # Find neighbor face to the current face
                     for k in range(num_vertex_faces):
                         neighbor = vertex_faces[vertex, k]
@@ -287,7 +300,7 @@ def repair_vertices(
                         if neighbor == -1 or visited_faces[k] == stamp:
                             continue
 
-                        # Retrieve the 3 vertices of the neighbor face
+                        # Retrieve the three vertices of the neighbor face
                         n_v0 = faces[neighbor, 0]
                         n_v1 = faces[neighbor, 1]
                         n_v2 = faces[neighbor, 2]
