@@ -94,6 +94,7 @@ convention = "numpy"
 [tool.coverage.run]
 omit = [
     "conftest.py",
+    "setup.py",
     "pseudocode.py",
     "tests/*",
     "edge_mender/Dual_Contouring_Voxel/*",

@@ -1,6 +1,8 @@
-from setuptools import setup, Extension
-from Cython.Build import cythonize
+"""Setup script for edge_mender package with Cython extensions."""
+
 import numpy as np
+from Cython.Build import cythonize
+from setuptools import Extension, setup
 
 extensions = [
     Extension(
