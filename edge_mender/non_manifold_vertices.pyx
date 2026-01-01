@@ -31,7 +31,7 @@ cdef long find_num_split_vertices(
 ) nogil:
     """Finds non-manifold vertices and counts the number of splits to repair.
 
-    Non-manifold vertices are defined as as vertices where more than one
+    Non-manifold vertices are defined as vertices where more than one
     contiguous group of faces originates.
     """
     # Initialize variables
@@ -43,7 +43,7 @@ cdef long find_num_split_vertices(
     cdef Py_ssize_t num_vertex_faces = vertex_faces.shape[1]
     # The current and neighbor face indices
     cdef cnp.int64_t face, neighbor
-    # The current and neighbor face vertex indicies
+    # The current and neighbor face vertex indices
     cdef cnp.int64_t f_v0, f_v1, f_v2, n_v0, n_v1, n_v2
 
     # A counter to enable recycling `visited_faces` for each vertex
@@ -89,7 +89,7 @@ cdef long find_num_split_vertices(
                 if not return_split_count:
                     break
 
-            # Retrieve the three vertex indicies of the current face
+            # Retrieve the three vertex indices of the current face
             f_v0 = faces[face, 0]
             f_v1 = faces[face, 1]
             f_v2 = faces[face, 2]
@@ -153,7 +153,7 @@ def repair_vertices(
 ) -> cnp.ndarray[cnp.float64_t]:
     """Finds and repairs non-manifold vertices.
 
-    Non-manifold vertices are defined as as vertices where more than one
+    Non-manifold vertices are defined as vertices where more than one
     contiguous group of faces originates.
 
     This algorithm uses a two-step process for performance. The first step is
@@ -170,10 +170,10 @@ def repair_vertices(
     cdef Py_ssize_t num_vertex_faces = vertex_faces.shape[1]
     # The current and neighbor face indices
     cdef cnp.int64_t face, neighbor
-    # The current and neighbor face vertex indicies
+    # The current and neighbor face vertex indices
     cdef cnp.int64_t f_v0, f_v1, f_v2, n_v0, n_v1, n_v2
 
-    # An array indicated which faces have been visited for the current vertex
+    # An array indicating which faces have been visited for the current vertex
     cdef cnp.uint64_t[::1] visited_faces = (
         np.zeros(num_vertex_faces, dtype=np.uint64)
     )
@@ -282,7 +282,7 @@ def repair_vertices(
                             )
                             raise ValueError(msg)
 
-                # Retrieve the three vertex indicies of the current face
+                # Retrieve the three vertex indices of the current face
                 f_v0 = faces[face, 0]
                 f_v1 = faces[face, 1]
                 f_v2 = faces[face, 2]

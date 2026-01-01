@@ -359,7 +359,7 @@ class EdgeMender:
 
         Requires all non-manifold edges to have already been repaired.
 
-        Non-manifold vertices are defined as as vertices where more than one
+        Non-manifold vertices are defined as vertices where more than one
         contiguous group of faces originates.
 
         It accomplishes this by finding and iterating through each non-manifold
