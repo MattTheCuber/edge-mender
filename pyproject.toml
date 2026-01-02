@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=74.1.0"]
+requires = ["setuptools>=74.1.0", "wheel", "cython", "numpy>=2.3.4"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -49,6 +49,7 @@ dev = [
     "pytest-mock>=3.15.1",
     "ruff>=0.14.7",
     "uv>=0.9.14",
+    "cibuildwheel>=3.3.0",
 ]
 examples = [
     "edge_mender[utils]",
@@ -70,6 +71,11 @@ eval = [
 [tool.setuptools]
 packages = ["edge_mender"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:builtin type (SwigPyPacked|SwigPyObject|swigvarlink) has no __module__ attribute:DeprecationWarning",
+]
+
 [tool.ruff]
 exclude = ["edge_mender/Dual_Contouring_Voxel"]
 
@@ -89,6 +95,7 @@ convention = "numpy"
 [tool.coverage.run]
 omit = [
     "conftest.py",
+    "setup.py",
     "pseudocode.py",
     "tests/*",
     "edge_mender/Dual_Contouring_Voxel/*",
