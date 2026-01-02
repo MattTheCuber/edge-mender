@@ -8,11 +8,10 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
+from edge_mender.non_manifold_edges import find_non_manifold_edges
 from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")
-
-NON_MANIFOLD_EDGE_FACE_COUNT = 4
 
 
 class EdgeMender:
@@ -96,50 +95,19 @@ class EdgeMender:
             msg = f"WARNING: Mesh has {unique_areas} unique non-uniform face areas."
             raise ValueError(msg)
 
-    def find_non_manifold_edges(
-        self,
-    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.int64]]:
+    def find_non_manifold_edges(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
         """Find non-manifold edges within the mesh.
 
         Non-manifold edges are defined as edges shared by 4 faces.
 
         Returns
         -------
-        non_manifold_faces : NDArray[np.int64]
-            An (n, 4) array of the four face indices for each non-manifold edge.
         non_manifold_vertices : NDArray[np.int64]
             An (n, 2) array of the two vertex indices for each non-manifold edge.
-        non_manifold_edges : NDArray[np.int64]
-            An (n,) array of the edge indices for each non-manifold edge.
-
-        Raises
-        ------
-        ValueError
-            If there is a problem with the edge face lookup.
-
-        References
-        ----------
-        .. [1] https://github.com/mikedh/trimesh/issues/2469
+        non_manifold_faces : NDArray[np.int64]
+            An (n, 4) array of the four face indices for each non-manifold edge.
         """
-        # Find all unique edges and their face counts
-        unique_edges, counts = np.unique(
-            self.mesh.faces_unique_edges.flatten(),
-            return_counts=True,
-        )
-        # Find the edges that are shared by 4 faces
-        edges = unique_edges[counts == NON_MANIFOLD_EDGE_FACE_COUNT]
-
-        # Get the vertices for each edge
-        vertices = self.mesh.edges_unique[edges]
-
-        # Get the faces for each edge
-        edge_index = self.mesh.edges_sorted_tree.query(
-            vertices,
-            k=NON_MANIFOLD_EDGE_FACE_COUNT,
-        )[1]
-        faces = edge_index // 3
-
-        return faces, vertices, edges
+        return find_non_manifold_edges(self.mesh.edges)
 
     def repair(self, *, shift_distance: float = 0.0) -> None:
         """Repair non-manifold edges in the mesh.
@@ -158,10 +126,8 @@ class EdgeMender:
             value should be less than 25% of the voxel size to avoid creating
             intersecting faces.
         """
-        non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
-            self.find_non_manifold_edges()
-        )
-        self.logger.debug("Found %d non-manifold edges\n", len(non_manifold_edges))
+        nme_vertices, nme_faces = self.find_non_manifold_edges()
+        self.logger.debug("Found %d non-manifold edges\n", len(nme_vertices))
 
         # Cache face normals
         self._face_normals = self.mesh.face_normals
@@ -171,19 +137,15 @@ class EdgeMender:
         # Track split vertices to avoid double processing
         split_vertices = set()
 
-        for original_edge_faces, edge_vertex_indices, edge in zip(
-            non_manifold_faces,
-            non_manifold_vertices,
-            non_manifold_edges,
+        for original_edge_faces, edge_vertex_indices in zip(
+            nme_faces,
+            nme_vertices,
             strict=True,
         ):
-            self.logger.debug("Processing edge %d", edge)
-
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
             self.logger.debug(
-                "Edge %d connects vertices %s at %s and %s",
-                edge,
+                "Processing edge %s at %s and %s",
                 edge_vertex_indices,
                 points[0],
                 points[1],
@@ -191,13 +153,13 @@ class EdgeMender:
 
             current_edge_faces = self._get_faces_at_edge(edge_vertex_indices)
             self.logger.debug(
-                "Edge %d was shared by faces %s",
-                edge,
+                "Edge %s was shared by faces %s",
+                edge_vertex_indices,
                 original_edge_faces,
             )
             self.logger.debug(
-                "Edge %d is now shared by faces %s",
-                edge,
+                "Edge %s is now shared by faces %s",
+                edge_vertex_indices,
                 current_edge_faces,
             )
 
