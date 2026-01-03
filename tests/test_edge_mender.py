@@ -143,31 +143,31 @@ def test_validate_fail_areas() -> None:
         (
             DataFactory.hole(),
             [
-                [18, 51, 21, 16],
-                [20, 57, 27, 24],
+                [16, 18, 21, 51],
+                [20, 24, 27, 57],
                 [20, 22, 35, 55],
-                [36, 34, 71, 43],
-                [55, 67, 50, 48],
-                [50, 46, 53, 95],
+                [48, 50, 55, 67],
                 [54, 56, 61, 73],
-                [99, 52, 59, 56],
-                [52, 69, 97, 54],
-                [64, 79, 66, 71],
-                [85, 70, 75, 72],
-                [70, 113, 81, 68],
+                [34, 36, 43, 71],
+                [64, 66, 71, 79],
+                [70, 72, 75, 85],
+                [46, 50, 53, 95],
+                [52, 56, 59, 99],
+                [52, 54, 69, 97],
+                [68, 70, 81, 113],
             ],
             [
                 [13, 17],
                 [14, 18],
                 [17, 18],
-                [21, 22],
                 [17, 31],
-                [27, 31],
                 [18, 32],
-                [28, 32],
-                [31, 32],
+                [21, 22],
                 [21, 35],
                 [22, 36],
+                [27, 31],
+                [28, 32],
+                [31, 32],
                 [35, 36],
             ],
         ),
@@ -219,7 +219,7 @@ def test_repair_shift() -> None:
     mender = EdgeMender(mesh)
     non_manifold_vertices = mender.find_non_manifold_edges()[0]
     mender.repair(shift_distance=0.1)
-    points = mesh.vertices[non_manifold_vertices][0]
+    points = mesh.vertices[non_manifold_vertices[0]]
     assert np.isin(points, [1.4, 2.5, 1.4]).all(axis=1).any()
     assert mesh.vertices[-1].tolist() == [1.6, 2.5, 1.6]
 
