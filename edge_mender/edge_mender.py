@@ -8,7 +8,11 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
-from edge_mender.non_manifold_edges import find_non_manifold_edges, get_faces_at_edge
+from edge_mender.non_manifold_edges import (
+    find_non_manifold_edges,
+    get_faces_at_edge,
+    get_faces_at_vertex,
+)
 from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")
@@ -194,7 +198,10 @@ class EdgeMender:
                 self.logger.debug("Edge direction: %s", edge_direction)
 
                 # Find all faces at this vertex
-                faces_at_vertex = self._get_faces_at_vertex(edge_vertex_index)
+                faces_at_vertex = get_faces_at_vertex(
+                    edge_vertex_index,
+                    self.mesh.faces,
+                )
                 self.logger.debug(
                     "Vertex %d at %s is connected to %d faces: %s",
                     edge_vertex_index,
@@ -347,22 +354,6 @@ class EdgeMender:
             self.mesh.triangles_center,
             shift_distance=shift_distance,
         )
-
-    def _get_faces_at_vertex(self, vertex: int) -> NDArray:
-        """Get the face indices at the specific vertex index.
-
-        Parameters
-        ----------
-        vertex : int
-            The vertex index.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        mask = np.flatnonzero(self.mesh.faces == vertex)
-        return np.unique(mask // self.mesh.faces.shape[1])
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
         """Get the centers of the given face indices.

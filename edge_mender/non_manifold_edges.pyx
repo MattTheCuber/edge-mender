@@ -5,6 +5,9 @@ cimport cython
 from libc.stdlib cimport malloc, free
 
 
+cdef int MAX_FACES_PER_VERTEX = 24
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -165,3 +168,45 @@ def get_faces_at_edge(
         return edge_faces
     finally:
         free(edge_faces_ptr)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def get_faces_at_vertex(
+    cnp.int64_t vertex,
+    cnp.ndarray[cnp.int64_t, ndim=2] faces,
+) -> cnp.ndarray[cnp.int64_t]:
+    """Finds and returns the face indices for the given vertex."""
+    # Initialize variables
+    cdef cnp.int64_t[:, ::1] faces_view = faces
+    # Loop index variables
+    cdef Py_ssize_t face
+    # The number of faces in the mesh
+    cdef Py_ssize_t num_faces = faces.shape[0]
+
+    # Initialize array to hold face indices
+    cdef cnp.ndarray[cnp.int64_t, ndim=1] vertex_faces = np.empty(
+        MAX_FACES_PER_VERTEX,
+        dtype=np.int64,
+    )
+    # The number of faces found
+    cdef int num_faces_at_vertex = 0
+
+    with nogil:
+        # For each face
+        for face in range(num_faces):
+            # If any vertex matches
+            if (
+                faces_view[face, 0] == vertex
+                or faces_view[face, 1] == vertex
+                or faces_view[face, 2] == vertex
+            ):
+                # Add the face index to the array and increment the count
+                vertex_faces[num_faces_at_vertex] = face
+                num_faces_at_vertex += 1
+
+                if num_faces_at_vertex >= MAX_FACES_PER_VERTEX:
+                    break
+
+    return vertex_faces[:num_faces_at_vertex]
