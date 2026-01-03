@@ -97,4 +97,8 @@ def find_non_manifold_edges(
                 # Increment non-manifold edge index counter
                 nme_index += 1
 
+                # Break if we've found all non-manifold edges
+                if nme_index >= num_non_manifold_edges:
+                    break
+
     return np.asarray(non_manifold_edges), np.asarray(non_manifold_edge_faces)
