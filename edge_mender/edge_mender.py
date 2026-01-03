@@ -339,7 +339,12 @@ class EdgeMender:
                         split_direction,
                     )
                     self._face_normals = np.vstack(
-                        [self._face_normals, self._face_normals[face_index]],
+                        [
+                            self._face_normals,
+                            self._face_normals[face_index],
+                            self._face_normals[face_index],
+                            self._face_normals[face_index],
+                        ],
                     )
 
             self.logger.debug("")
@@ -689,7 +694,7 @@ class EdgeMender:
         new_vertex_left: int,
         new_vertex_right: int,
         split_direction: NDArray,
-    ) -> int:
+    ) -> None:
         """Split the face sharing an edge in half.
 
         Parameters
@@ -719,21 +724,63 @@ class EdgeMender:
         ValueError
             Raised if face center is equidistant to the split direction origin.
         """
+        # Find which new vertex to use
         face_points = self.mesh.faces[face_index]
         matches_split_direction = GeometryHelper.point_in_direction(
             new_point,
             split_direction,
             face_center,
         )
+        new_vertex = new_vertex_left if matches_split_direction else new_vertex_right
 
-        new_face_points = face_points.copy()
-        if matches_split_direction:
-            face_points[face_points == edge_vertices[0]] = new_vertex_left
-            new_face_points[face_points == edge_vertices[1]] = new_vertex_left
-        else:
-            face_points[face_points == edge_vertices[0]] = new_vertex_right
-            new_face_points[face_points == edge_vertices[1]] = new_vertex_right
+        # Create the hypotenuse point
+        hypotenuse_vertices = face_points[
+            list(GeometryHelper.hypotenuse_points(self.mesh.vertices[face_points]))
+        ]
+        hypotenuse_point = np.mean(self.mesh.vertices[hypotenuse_vertices], axis=0)
+        self.mesh.vertices = np.vstack([self.mesh.vertices, hypotenuse_point])
+        hypotenuse_vertex = self.mesh.vertices.shape[0] - 1
 
-        self.mesh.faces = np.vstack([self.mesh.faces, new_face_points])
+        # Find the non-edge and non-hypotenuse vertices
+        non_edge_vertex = np.setdiff1d(hypotenuse_vertices, edge_vertices)[0]
+        hypotenuse_edge_vertex = np.intersect1d(edge_vertices, hypotenuse_vertices)[0]
 
-        return self.mesh.faces.shape[0] - 1
+        # Find the adjacent face index sharing the hypotenuse edge
+        adjacent_face_index = np.setdiff1d(
+            self._get_faces_at_edge(hypotenuse_vertices),
+            face_index,
+        )[0]
+        adjacent_face_points = self.mesh.faces[adjacent_face_index]
+
+        # Split the face into three faces
+        new_face_points_1 = face_points.copy()
+        new_face_points_2 = face_points.copy()
+        # New edge face 1
+        face_points[face_points == edge_vertices[0]] = new_vertex
+        face_points[face_points == non_edge_vertex] = hypotenuse_vertex
+        # New edge face 2
+        new_face_points_1[new_face_points_1 == edge_vertices[1]] = new_vertex
+        new_face_points_1[new_face_points_1 == non_edge_vertex] = hypotenuse_vertex
+        # New non-edge face
+        new_face_points_2[new_face_points_2 == hypotenuse_edge_vertex] = (
+            hypotenuse_vertex
+        )
+
+        # Split adjacent face to use hypotenuse vertex
+        new_adjacent_face_points = adjacent_face_points.copy()
+        adjacent_face_points[adjacent_face_points == hypotenuse_vertices[0]] = (
+            hypotenuse_vertex
+        )
+        new_adjacent_face_points[new_adjacent_face_points == hypotenuse_vertices[1]] = (
+            hypotenuse_vertex
+        )
+
+        # Add the new faces to the mesh
+        self.mesh.faces = np.vstack(
+            [
+                self.mesh.faces,
+                new_face_points_1,
+                new_face_points_2,
+                new_adjacent_face_points,
+            ],
+        )

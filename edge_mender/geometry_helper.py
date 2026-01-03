@@ -201,3 +201,54 @@ class GeometryHelper:
         t, s = np.linalg.solve(coefficients, delta)
         # Check if the intersection point is in the positive direction of both rays
         return t >= -tolerance and s >= -tolerance
+
+    @staticmethod
+    def hypotenuse_points(points: NDArray) -> tuple[int, int]:
+        """Find the two points that form the hypotenuse of a right triangle.
+
+        Parameters
+        ----------
+        points : NDArray
+            The three 3D points to analyze.
+
+        Returns
+        -------
+        tuple[int, int]
+            The two hypotenuse endpoint indices.
+
+        References
+        ----------
+        .. [1] https://stackoverflow.com/a/54057593/9725459
+        """
+        # Compute squared distances
+        distance_squared = np.sum(
+            (points[:, None, :] - points[None, :, :]) ** 2,
+            axis=-1,
+        )
+
+        # Find the indices of the maximum distance
+        i, j = np.unravel_index(np.argmax(distance_squared), distance_squared.shape)
+
+        return i.item(), j.item()
+
+        # Test cases (using ceiling test case data):
+        # face indices 22
+        # face points [18 16 19] = [18, 16]
+        # face vertices [[0.5 2.5 1.5]
+        #  [1.5 1.5 1.5]
+        #  [1.5 2.5 1.5]]
+        # face indices 24
+        # face points [16  7 19] = [16, 7]
+        # face vertices [[1.5 1.5 1.5]
+        #  [1.5 2.5 0.5]
+        #  [1.5 2.5 1.5]]
+        # face indices 27
+        # face points [16 19 17] = [19, 17]
+        # face vertices [[1.5 1.5 1.5]
+        #  [1.5 2.5 1.5]
+        #  [2.5 1.5 1.5]]
+        # face indices 55
+        # face points [16 28 19] = [28, 19]
+        # face vertices [[1.5 1.5 1.5]
+        #  [1.5 1.5 2.5]
+        #  [1.5 2.5 1.5]]
