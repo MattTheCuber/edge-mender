@@ -2,6 +2,7 @@
 import numpy as np
 cimport numpy as cnp
 cimport cython
+from libc.stdlib cimport malloc, free
 
 
 @cython.boundscheck(False)
@@ -102,3 +103,65 @@ def find_non_manifold_edges(
                     break
 
     return np.asarray(non_manifold_edges), np.asarray(non_manifold_edge_faces)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def get_faces_at_edge(
+    cnp.int64_t e_v0,
+    cnp.int64_t e_v1,
+    cnp.ndarray[cnp.int64_t, ndim=2] faces,
+) -> cnp.ndarray[cnp.int64_t]:
+    """Finds and returns the face indices for the given edge vertices.
+
+    This assumes edges have 4 faces at most.
+    """
+    # Initialize variables
+    cdef cnp.int64_t[:, ::1] faces_view = faces
+    # Loop index variables
+    cdef Py_ssize_t face
+    # The number of faces in the mesh
+    cdef Py_ssize_t num_faces = faces.shape[0]
+
+    # The current face vertex indices
+    cdef cnp.int64_t f_v0, f_v1, f_v2
+    # Match flags for each vertex
+    cdef bint m0, m1, m2
+    # The number of faces found
+    cdef int num_faces_at_edge = 0
+    # Initialize array to hold face indices
+    cdef cnp.int64_t* edge_faces_ptr
+    cdef cnp.ndarray[cnp.int64_t, ndim=1] edge_faces
+    edge_faces_ptr = <cnp.int64_t*>malloc(4 * sizeof(cnp.int64_t))
+
+    try:
+        with nogil:
+            # For each face
+            for face in range(num_faces):
+                # Retrieve the three vertices of the current face
+                f_v0 = faces_view[face, 0]
+                f_v1 = faces_view[face, 1]
+                f_v2 = faces_view[face, 2]
+
+                # Check for matching vertices
+                m0 = (f_v0 == e_v0) or (f_v0 == e_v1)
+                m1 = (f_v1 == e_v0) or (f_v1 == e_v1)
+                m2 = (f_v2 == e_v0) or (f_v2 == e_v1)
+
+                # If two vertices match, the face is on the edge
+                if (m0 + m1 + m2) == 2:
+                    edge_faces_ptr[num_faces_at_edge] = face
+                    num_faces_at_edge += 1
+
+                    if num_faces_at_edge == 4:
+                        break
+
+        # Create result array and copy data
+        edge_faces = np.empty(num_faces_at_edge, dtype=np.int64)
+        for face in range(num_faces_at_edge):
+            edge_faces[face] = edge_faces_ptr[face]
+
+        return edge_faces
+    finally:
+        free(edge_faces_ptr)

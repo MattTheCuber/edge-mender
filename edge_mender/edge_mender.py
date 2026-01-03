@@ -8,7 +8,7 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
-from edge_mender.non_manifold_edges import find_non_manifold_edges
+from edge_mender.non_manifold_edges import find_non_manifold_edges, get_faces_at_edge
 from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")
@@ -151,7 +151,11 @@ class EdgeMender:
                 points[1],
             )
 
-            current_edge_faces = self._get_faces_at_edge(edge_vertex_indices)
+            current_edge_faces = get_faces_at_edge(
+                edge_vertex_indices[0],
+                edge_vertex_indices[1],
+                self.mesh.faces,
+            )
             self.logger.debug(
                 "Edge %s was shared by faces %s",
                 edge_vertex_indices,
@@ -343,28 +347,6 @@ class EdgeMender:
             self.mesh.triangles_center,
             shift_distance=shift_distance,
         )
-
-    def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
-        """Get the face indices sharing the given edge vertex indices.
-
-        Parameters
-        ----------
-        edge_vertices : NDArray
-            Two edge vertex indices.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        v0, v1 = edge_vertices
-        f = self.mesh.faces
-        # Match faces that contain the first vertex
-        match_v0 = (f[:, 0] == v0) | (f[:, 1] == v0) | (f[:, 2] == v0)
-        # Match faces that contain the second vertex
-        match_v1 = (f[:, 0] == v1) | (f[:, 1] == v1) | (f[:, 2] == v1)
-        # Return face indices that contain both vertices
-        return np.where(match_v0 & match_v1)[0]
 
     def _get_faces_at_vertex(self, vertex: int) -> NDArray:
         """Get the face indices at the specific vertex index.
