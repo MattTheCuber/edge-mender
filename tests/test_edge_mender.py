@@ -80,7 +80,7 @@ def test_validate_fail_areas() -> None:
 
 
 @pytest.mark.parametrize(
-    ("data", "expected_faces", "expected_vertices", "expected_edges"),
+    ("data", "expected_faces", "expected_vertices"),
     [
         (
             np.array(
@@ -92,49 +92,41 @@ def test_validate_fail_areas() -> None:
             ),
             np.empty((0, 4)),
             np.empty((0, 2)),
-            [],
         ),
         (
             DataFactory.simple_extrusion(),
             [[25, 41, 18, 22]],
             [[12, 15]],
-            [37],
         ),
         (
             DataFactory.double_extrusion(),
             [[51, 20, 22, 25], [35, 32, 57, 28]],
             [[14, 17], [17, 20]],
-            [42, 52],
         ),
         (
             DataFactory.triple_extrusion(),
             [[27, 61, 24, 22], [35, 67, 32, 30], [73, 38, 45, 42]],
             [[16, 19], [19, 22], [22, 25]],
-            [46, 57, 67],
         ),
         (
             DataFactory.stairs(),
             [[28, 30, 65, 33]],
             [[19, 22]],
-            [55],
         ),
         (
             DataFactory.ceiling(),
             [[24, 27, 55, 22]],
             [[16, 19]],
-            [46],
         ),
         (
             DataFactory.double_tower_ceiling(),
             [[26, 61, 29, 24], [37, 32, 34, 69]],
             [[18, 21], [21, 24]],
-            [50, 61],
         ),
         (
             DataFactory.hanging_points(),
             [[38, 45, 40, 59]],
             [[10, 25]],
-            [68],
         ),
         (
             DataFactory.checkerboard(),
@@ -147,39 +139,37 @@ def test_validate_fail_areas() -> None:
                 [66, 71, 64, 79],
             ],
             [[7, 22], [19, 22], [21, 22], [22, 23], [22, 25], [22, 37]],
-            [49, 52, 54, 58, 65, 105],
         ),
         (
             DataFactory.hole(),
             [
-                [18, 51, 21, 16],
-                [20, 57, 27, 24],
+                [16, 18, 21, 51],
+                [20, 24, 27, 57],
                 [20, 22, 35, 55],
-                [36, 34, 71, 43],
-                [55, 67, 50, 48],
-                [50, 46, 53, 95],
+                [48, 50, 55, 67],
                 [54, 56, 61, 73],
-                [99, 52, 59, 56],
-                [52, 69, 97, 54],
-                [64, 79, 66, 71],
-                [85, 70, 75, 72],
-                [70, 113, 81, 68],
+                [34, 36, 43, 71],
+                [64, 66, 71, 79],
+                [70, 72, 75, 85],
+                [46, 50, 53, 95],
+                [52, 56, 59, 99],
+                [52, 54, 69, 97],
+                [68, 70, 81, 113],
             ],
             [
                 [13, 17],
                 [14, 18],
                 [17, 18],
-                [21, 22],
                 [17, 31],
-                [27, 31],
                 [18, 32],
-                [28, 32],
-                [31, 32],
+                [21, 22],
                 [21, 35],
                 [22, 36],
+                [27, 31],
+                [28, 32],
+                [31, 32],
                 [35, 36],
             ],
-            [40, 44, 46, 62, 83, 86, 89, 92, 94, 102, 108, 112],
         ),
     ],
 )
@@ -187,17 +177,15 @@ def test_find_non_manifold_edges(
     data: NDArray,
     expected_faces: NDArray | list[list[int]],
     expected_vertices: NDArray | list[list[int]],
-    expected_edges: NDArray | list[int],
 ) -> None:
     """Test that the find_non_manifold_edges function works correctly."""
     mesh = MeshGenerator.to_mesh_surface_nets(data)
-    faces, vertices, edges = EdgeMender(mesh).find_non_manifold_edges()
+    vertices, faces = EdgeMender(mesh).find_non_manifold_edges()
     faces.sort(axis=1)
     expected_faces = np.array(expected_faces)
     expected_faces.sort(axis=1)
     np.testing.assert_array_equal(faces, expected_faces)
     np.testing.assert_array_equal(vertices, expected_vertices)
-    np.testing.assert_array_equal(edges, expected_edges)
 
 
 @pytest.mark.parametrize(
@@ -222,16 +210,16 @@ def test_repair(data: NDArray) -> None:
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
-    assert len(mender.find_non_manifold_edges()[2]) == 0
+    assert len(mender.find_non_manifold_edges()[0]) == 0
 
 
 def test_repair_shift() -> None:
     """Test that the repair function works with shifting the vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion())
     mender = EdgeMender(mesh)
-    non_manifold_vertices = mender.find_non_manifold_edges()[1]
+    non_manifold_vertices = mender.find_non_manifold_edges()[0]
     mender.repair(shift_distance=0.1)
-    points = mesh.vertices[non_manifold_vertices][0]
+    points = mesh.vertices[non_manifold_vertices[0]]
     assert np.isin(points, [1.4, 2.5, 1.4]).all(axis=1).any()
     assert mesh.vertices[-1].tolist() == [1.6, 2.5, 1.6]
 
