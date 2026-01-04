@@ -8,6 +8,13 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
+from edge_mender.non_manifold_edges import (
+    find_non_manifold_edges as fnme,  # noqa: F401
+)
+from edge_mender.non_manifold_edges import (
+    get_faces_at_edge,  # noqa: F401
+    get_faces_at_vertex,  # noqa: F401
+)
 from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")

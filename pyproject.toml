@@ -50,6 +50,8 @@ dev = [
     "ruff>=0.14.7",
     "uv>=0.9.14",
     "cibuildwheel>=3.3.0",
+    "cython",
+    "setuptools>=74.1.0",
 ]
 examples = [
     "edge_mender[utils]",
