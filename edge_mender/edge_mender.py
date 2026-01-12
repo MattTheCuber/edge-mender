@@ -8,6 +8,11 @@ import trimesh
 from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
+from edge_mender.non_manifold_edges import (
+    find_non_manifold_edges,
+    get_faces_at_edge,
+    get_faces_at_vertex,
+)
 from edge_mender.non_manifold_vertices import repair_vertices
 
 logging.basicConfig(format="%(message)s")
@@ -96,6 +101,20 @@ class EdgeMender:
             msg = f"WARNING: Mesh has {unique_areas} unique non-uniform face areas."
             raise ValueError(msg)
 
+    def find_non_manifold_edges_2(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """Find non-manifold edges within the mesh.
+
+        Non-manifold edges are defined as edges shared by 4 faces.
+
+        Returns
+        -------
+        non_manifold_vertices : NDArray[np.int64]
+            An (n, 2) array of the two vertex indices for each non-manifold edge.
+        non_manifold_faces : NDArray[np.int64]
+            An (n, 4) array of the four face indices for each non-manifold edge.
+        """
+        return find_non_manifold_edges(self.mesh.edges)
+
     def find_non_manifold_edges(
         self,
     ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.int64]]:
@@ -158,10 +177,8 @@ class EdgeMender:
             value should be less than 25% of the voxel size to avoid creating
             intersecting faces.
         """
-        non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
-            self.find_non_manifold_edges()
-        )
-        self.logger.debug("Found %d non-manifold edges\n", len(non_manifold_edges))
+        nme_vertices, nme_faces = self.find_non_manifold_edges_2()
+        self.logger.debug("Found %d non-manifold edges\n", len(nme_vertices))
 
         # Cache face normals
         self._face_normals = self.mesh.face_normals
@@ -171,33 +188,33 @@ class EdgeMender:
         # Track split vertices to avoid double processing
         split_vertices = set()
 
-        for original_edge_faces, edge_vertex_indices, edge in zip(
-            non_manifold_faces,
-            non_manifold_vertices,
-            non_manifold_edges,
+        for original_edge_faces, edge_vertex_indices in zip(
+            nme_faces,
+            nme_vertices,
             strict=True,
         ):
-            self.logger.debug("Processing edge %d", edge)
-
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
             self.logger.debug(
-                "Edge %d connects vertices %s at %s and %s",
-                edge,
+                "Processing edge %s at %s and %s",
                 edge_vertex_indices,
                 points[0],
                 points[1],
             )
 
-            current_edge_faces = self._get_faces_at_edge(edge_vertex_indices)
+            current_edge_faces = get_faces_at_edge(
+                edge_vertex_indices[0],
+                edge_vertex_indices[1],
+                self.mesh.faces,
+            )
             self.logger.debug(
-                "Edge %d was shared by faces %s",
-                edge,
+                "Edge %s was shared by faces %s",
+                edge_vertex_indices,
                 original_edge_faces,
             )
             self.logger.debug(
-                "Edge %d is now shared by faces %s",
-                edge,
+                "Edge %s is now shared by faces %s",
+                edge_vertex_indices,
                 current_edge_faces,
             )
 
@@ -228,7 +245,10 @@ class EdgeMender:
                 self.logger.debug("Edge direction: %s", edge_direction)
 
                 # Find all faces at this vertex
-                faces_at_vertex = self._get_faces_at_vertex(edge_vertex_index)
+                faces_at_vertex = get_faces_at_vertex(
+                    edge_vertex_index,
+                    self.mesh.faces,
+                )
                 self.logger.debug(
                     "Vertex %d at %s is connected to %d faces: %s",
                     edge_vertex_index,
@@ -381,44 +401,6 @@ class EdgeMender:
             self.mesh.triangles_center,
             shift_distance=shift_distance,
         )
-
-    def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
-        """Get the face indices sharing the given edge vertex indices.
-
-        Parameters
-        ----------
-        edge_vertices : NDArray
-            Two edge vertex indices.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        v0, v1 = edge_vertices
-        f = self.mesh.faces
-        # Match faces that contain the first vertex
-        match_v0 = (f[:, 0] == v0) | (f[:, 1] == v0) | (f[:, 2] == v0)
-        # Match faces that contain the second vertex
-        match_v1 = (f[:, 0] == v1) | (f[:, 1] == v1) | (f[:, 2] == v1)
-        # Return face indices that contain both vertices
-        return np.where(match_v0 & match_v1)[0]
-
-    def _get_faces_at_vertex(self, vertex: int) -> NDArray:
-        """Get the face indices at the specific vertex index.
-
-        Parameters
-        ----------
-        vertex : int
-            The vertex index.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        mask = np.flatnonzero(self.mesh.faces == vertex)
-        return np.unique(mask // self.mesh.faces.shape[1])
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
         """Get the centers of the given face indices.
