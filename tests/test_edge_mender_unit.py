@@ -7,6 +7,7 @@ import trimesh
 from edge_mender.data_factory import DataFactory
 from edge_mender.edge_mender import EdgeMender
 from edge_mender.mesh_generator import MeshGenerator
+from edge_mender.non_manifold_edges import get_faces_at_edge, get_faces_at_vertex
 
 
 def test_edge_mender_init() -> None:
@@ -55,9 +56,11 @@ def test_get_faces_at_edge(
     expected_faces: list[int],
 ) -> None:
     """Test that the get_faces_at_edge function returns the correct faces."""
-    edge_mender = EdgeMender(mesh)
-
-    faces = edge_mender._get_faces_at_edge(np.array(edge_vertices))
+    faces = get_faces_at_edge(
+        np.int64(edge_vertices[0]),
+        np.int64(edge_vertices[1]),
+        mesh.faces,
+    )
 
     faces.sort()
     e = np.array(expected_faces)
@@ -94,9 +97,7 @@ def test_get_faces_at_vertex(
     expected_faces: list[int],
 ) -> None:
     """Test that the get_faces_at_vertex function returns the correct faces."""
-    edge_mender = EdgeMender(mesh)
-
-    faces = edge_mender._get_faces_at_vertex(vertex)
+    faces = get_faces_at_vertex(np.int64(vertex), mesh.faces)
 
     faces.sort()
     e = np.array(expected_faces)
@@ -201,7 +202,7 @@ def test_has_normals_matching_edge(
     assert (
         edge_mender._has_normals_matching_edge(
             edge_vertex_index,
-            edge_mender._get_faces_at_vertex(edge_vertex_index),
+            get_faces_at_vertex(np.int64(edge_vertex_index), mesh.faces),
             np.array(edge_direction),
         )
         == expected
