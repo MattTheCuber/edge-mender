@@ -75,6 +75,10 @@ def find_non_manifold_edges(
     with nogil:
         # For each edge
         for edge in range(num_edges):
+            # Break if we've found all non-manifold edges
+            if nme_index >= num_non_manifold_edges:
+                break
+
             # Increment face count for this edge
             edge_face_count += 1
 
@@ -100,10 +104,6 @@ def find_non_manifold_edges(
 
                 # Increment non-manifold edge index counter
                 nme_index += 1
-
-                # Break if we've found all non-manifold edges
-                if nme_index >= num_non_manifold_edges:
-                    break
 
     return np.asarray(non_manifold_edges), np.asarray(non_manifold_edge_faces)
 
