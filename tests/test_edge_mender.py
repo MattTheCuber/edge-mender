@@ -200,25 +200,26 @@ def test_find_non_manifold_edges(
     np.testing.assert_array_equal(edges, expected_edges)
 
 
-@pytest.mark.parametrize(
-    "data",
-    [
-        DataFactory.simple_extrusion(),
-        # .DataFactory.double_extrusion(),
-        # .DataFactory.triple_extrusion(),
-        # .DataFactory.stairs(),
-        # .DataFactory.ceiling(),
-        # .DataFactory.double_tower_ceiling(),
-        # .DataFactory.hanging_points(),
-        # .DataFactory.checkerboard(),
-        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
-        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
-        # DataFactory.hole(),  # noqa: ERA001
-        # .DataFactory.kill_you(),
-    ],
-)
-def test_repair(data: NDArray) -> None:
+# @pytest.mark.parametrize(
+#     "data",
+#    . [
+#   .      DataFactory.simple_extrusion(),
+#         # .DataFactory.double_extrusion(),
+#         # .DataFactory.triple_extrusion(),
+#         # .DataFactory.stairs(),
+#         # .DataFactory.ceiling(),
+#         # .DataFactory.double_tower_ceiling(),
+#         # .DataFactory.hanging_points(),
+#         # .DataFactory.checkerboard(),
+#         # NOTE: This test case fails due to a bug with SurfaceNets from VTK
+#         # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released
+#         # DataFactory.hole(),  # noqa: ERA001
+#         # .DataFactory.kill_you(),
+#     ],
+# .)
+def test_repair() -> None:
     """Test that the repair function works for the test cases."""
+    data = DataFactory.simple_extrusion()
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
