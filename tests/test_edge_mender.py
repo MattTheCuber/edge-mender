@@ -222,16 +222,16 @@ def test_repair(data: NDArray) -> None:
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
-    assert len(mender.find_non_manifold_edges_2()[0]) == 0
+    assert len(mender.find_non_manifold_edges()[2]) == 0
 
 
 def test_repair_shift() -> None:
     """Test that the repair function works with shifting the vertices."""
     mesh = MeshGenerator.to_mesh_surface_nets(DataFactory.simple_extrusion())
     mender = EdgeMender(mesh)
-    non_manifold_vertices = mender.find_non_manifold_edges()[1]
+    non_manifold_vertices = mender.find_non_manifold_edges_2()[0]
     mender.repair(shift_distance=0.1)
-    points = mesh.vertices[non_manifold_vertices][0]
+    points = mesh.vertices[non_manifold_vertices[0]]
     assert np.isin(points, [1.4, 2.5, 1.4]).all(axis=1).any()
     assert mesh.vertices[-1].tolist() == [1.6, 2.5, 1.6]
 
