@@ -222,7 +222,7 @@ def test_repair(data: NDArray) -> None:
     mesh = MeshGenerator.to_mesh_surface_nets(data)
     mender = EdgeMender(mesh)
     mender.repair()
-    assert len(mender.find_non_manifold_edges()[2]) == 0
+    assert len(mender.find_non_manifold_edges_2()[0]) == 0
 
 
 def test_repair_shift() -> None:
