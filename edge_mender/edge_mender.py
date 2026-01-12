@@ -9,11 +9,7 @@ from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
 from edge_mender.non_manifold_edges import (
-    find_non_manifold_edges as fnme,  # noqa: F401
-)
-from edge_mender.non_manifold_edges import (
-    get_faces_at_edge,  # noqa: F401
-    get_faces_at_vertex,  # noqa: F401
+    get_faces_at_edge,
 )
 from edge_mender.non_manifold_vertices import repair_vertices
 
@@ -165,10 +161,8 @@ class EdgeMender:
             value should be less than 25% of the voxel size to avoid creating
             intersecting faces.
         """
-        non_manifold_faces, non_manifold_vertices, non_manifold_edges = (
-            self.find_non_manifold_edges()
-        )
-        self.logger.debug("Found %d non-manifold edges\n", len(non_manifold_edges))
+        nme_faces, nme_vertices, _ = self.find_non_manifold_edges()
+        self.logger.debug("Found %d non-manifold edges\n", len(nme_vertices))
 
         # Cache face normals
         self._face_normals = self.mesh.face_normals
@@ -178,33 +172,33 @@ class EdgeMender:
         # Track split vertices to avoid double processing
         split_vertices = set()
 
-        for original_edge_faces, edge_vertex_indices, edge in zip(
-            non_manifold_faces,
-            non_manifold_vertices,
-            non_manifold_edges,
+        for original_edge_faces, edge_vertex_indices in zip(
+            nme_faces,
+            nme_vertices,
             strict=True,
         ):
-            self.logger.debug("Processing edge %d", edge)
-
             edge_vertex_indices: NDArray
             points = self.mesh.vertices[edge_vertex_indices]
             self.logger.debug(
-                "Edge %d connects vertices %s at %s and %s",
-                edge,
+                "Processing edge %s at %s and %s",
                 edge_vertex_indices,
                 points[0],
                 points[1],
             )
 
-            current_edge_faces = self._get_faces_at_edge(edge_vertex_indices)
+            current_edge_faces = get_faces_at_edge(
+                edge_vertex_indices[0],
+                edge_vertex_indices[1],
+                self.mesh.faces,
+            )
             self.logger.debug(
-                "Edge %d was shared by faces %s",
-                edge,
+                "Edge %s was shared by faces %s",
+                edge_vertex_indices,
                 original_edge_faces,
             )
             self.logger.debug(
-                "Edge %d is now shared by faces %s",
-                edge,
+                "Edge %s is now shared by faces %s",
+                edge_vertex_indices,
                 current_edge_faces,
             )
 
