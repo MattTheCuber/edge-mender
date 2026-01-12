@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from edge_mender.geometry_helper import GeometryHelper
 from edge_mender.non_manifold_edges import (
     get_faces_at_edge,
+    get_faces_at_vertex,
 )
 from edge_mender.non_manifold_vertices import repair_vertices
 
@@ -229,7 +230,10 @@ class EdgeMender:
                 self.logger.debug("Edge direction: %s", edge_direction)
 
                 # Find all faces at this vertex
-                faces_at_vertex = self._get_faces_at_vertex(edge_vertex_index)
+                faces_at_vertex = get_faces_at_vertex(
+                    edge_vertex_index,
+                    self.mesh.faces,
+                )
                 self.logger.debug(
                     "Vertex %d at %s is connected to %d faces: %s",
                     edge_vertex_index,
