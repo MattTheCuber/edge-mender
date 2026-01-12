@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 
 from edge_mender.geometry_helper import GeometryHelper
 from edge_mender.non_manifold_edges import (
+    find_non_manifold_edges,
     get_faces_at_edge,
     get_faces_at_vertex,
 )
@@ -100,6 +101,20 @@ class EdgeMender:
             msg = f"WARNING: Mesh has {unique_areas} unique non-uniform face areas."
             raise ValueError(msg)
 
+    def find_non_manifold_edges_2(self) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """Find non-manifold edges within the mesh.
+
+        Non-manifold edges are defined as edges shared by 4 faces.
+
+        Returns
+        -------
+        non_manifold_vertices : NDArray[np.int64]
+            An (n, 2) array of the two vertex indices for each non-manifold edge.
+        non_manifold_faces : NDArray[np.int64]
+            An (n, 4) array of the four face indices for each non-manifold edge.
+        """
+        return find_non_manifold_edges(self.mesh.edges)
+
     def find_non_manifold_edges(
         self,
     ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.int64]]:
@@ -162,7 +177,7 @@ class EdgeMender:
             value should be less than 25% of the voxel size to avoid creating
             intersecting faces.
         """
-        nme_faces, nme_vertices, _ = self.find_non_manifold_edges()
+        nme_vertices, nme_faces = self.find_non_manifold_edges_2()
         self.logger.debug("Found %d non-manifold edges\n", len(nme_vertices))
 
         # Cache face normals
@@ -386,44 +401,6 @@ class EdgeMender:
             self.mesh.triangles_center,
             shift_distance=shift_distance,
         )
-
-    def _get_faces_at_edge(self, edge_vertices: NDArray) -> NDArray:
-        """Get the face indices sharing the given edge vertex indices.
-
-        Parameters
-        ----------
-        edge_vertices : NDArray
-            Two edge vertex indices.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        v0, v1 = edge_vertices
-        f = self.mesh.faces
-        # Match faces that contain the first vertex
-        match_v0 = (f[:, 0] == v0) | (f[:, 1] == v0) | (f[:, 2] == v0)
-        # Match faces that contain the second vertex
-        match_v1 = (f[:, 0] == v1) | (f[:, 1] == v1) | (f[:, 2] == v1)
-        # Return face indices that contain both vertices
-        return np.where(match_v0 & match_v1)[0]
-
-    def _get_faces_at_vertex(self, vertex: int) -> NDArray:
-        """Get the face indices at the specific vertex index.
-
-        Parameters
-        ----------
-        vertex : int
-            The vertex index.
-
-        Returns
-        -------
-        NDArray
-            An array of face indices.
-        """
-        mask = np.flatnonzero(self.mesh.faces == vertex)
-        return np.unique(mask // self.mesh.faces.shape[1])
 
     def _get_face_centers(self, face_indices: NDArray) -> NDArray:
         """Get the centers of the given face indices.
