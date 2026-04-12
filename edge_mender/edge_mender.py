@@ -15,13 +15,11 @@ from edge_mender.non_manifold_edges import (
 )
 from edge_mender.non_manifold_vertices import repair_vertices
 
-logging.basicConfig(format="%(message)s")
-
 
 class EdgeMender:
     """The class for repairing non-manifold edges in voxel boundary meshes."""
 
-    def __init__(self, mesh: trimesh.Trimesh, *, debug: bool = False) -> None:
+    def __init__(self, mesh: trimesh.Trimesh) -> None:
         self.mesh = mesh
         self._face_normals: NDArray[np.float64] = np.empty((0, 3), dtype=np.float64)
         """Return the unit normal vector for each face.
@@ -34,7 +32,6 @@ class EdgeMender:
         Normal vectors of each face
         """
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG if debug else logging.WARNING)
 
     def validate(self, *, spacing: tuple[float, float, float]) -> None:
         """Validate that the mesh is a valid voxel boundary mesh before repair.

@@ -13,9 +13,7 @@ from edge_mender.non_manifold_edges import get_faces_at_edge, get_faces_at_verte
 def test_edge_mender_init() -> None:
     """Test that the EdgeMender class can be initialized."""
     mesh = trimesh.creation.box()
-
     EdgeMender(mesh)
-    EdgeMender(mesh, debug=True)
 
 
 @pytest.mark.parametrize(
