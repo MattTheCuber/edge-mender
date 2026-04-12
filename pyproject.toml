@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "edge-mender"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Topology Repair Algorithm for Voxel Boundary Meshes"
 authors = [{ name = "Matthew Vine", email = "mattvine03@gmail.com" }]
 keywords = ["mesh", "manifold", "topology", "voxel", "3d", "geometry"]
