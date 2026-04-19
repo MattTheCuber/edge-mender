@@ -47,7 +47,6 @@ def test_to_mesh_cuberille(data: NDArray) -> None:
         DataFactory.hole(),
         DataFactory.kill_you(),
         DataFactory.random(size=8, seed=0),
-        # SurfaceNets makes this have negative volume until inverted
         DataFactory.random(size=3, seed=55),
     ],
 )

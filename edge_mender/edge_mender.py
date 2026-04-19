@@ -568,9 +568,19 @@ class EdgeMender:
         )
 
         if matches_split_direction:
+            self.logger.debug(
+                "Reassigning face %d to vertex %d",
+                face_index,
+                new_vertex,
+            )
             face_points[face_points == vertex_to_reassign] = new_vertex
         else:
-            pass  # No change
+            # No change
+            self.logger.debug(
+                "Leaving face %d at vertex %d",
+                face_index,
+                vertex_to_reassign,
+            )
 
     def _split_edge(self, points: NDArray) -> tuple[NDArray, int, NDArray, int]:
         """Split the given edge by creating two new vertices in the mesh.
