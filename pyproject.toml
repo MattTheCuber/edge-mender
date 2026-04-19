@@ -31,7 +31,6 @@ Repository = "https://github.com/MattTheCuber/edge-mender"
 [project.optional-dependencies]
 utils = [
     "connected-components-3d>=3.26.1",
-    "fill-voids>=2.1.1",
     "itk>=5.4.5",
     "itk-cuberille>=2.7.2",
     "manifold3d>=3.3.2",
