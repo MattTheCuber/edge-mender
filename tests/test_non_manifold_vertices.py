@@ -34,9 +34,7 @@ def test_has_non_manifold_vertices_basic() -> None:
         (DataFactory.double_tower_ceiling(), 0),
         (DataFactory.hanging_points(), 0),
         (DataFactory.checkerboard(), 1),
-        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
-        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
-        # (DataFactory.hole(), False),  # noqa: ERA001
+        (DataFactory.hole(), 8),
         (DataFactory.kill_you(), 1),
     ],
 )
@@ -80,9 +78,7 @@ def test_repair_non_manifold_vertices_basic(shift_distance: float) -> None:
         DataFactory.double_tower_ceiling(),  # This has no non-manifold vertices
         DataFactory.hanging_points(),  # This has no non-manifold vertices
         DataFactory.checkerboard(),
-        # NOTE: This test case fails due to a bug with SurfaceNets from VTK
-        # https://gitlab.kitware.com/vtk/vtk/-/issues/19156, fixed, but not released yet
-        # DataFactory.hole(),  # noqa: ERA001
+        DataFactory.hole(),
         DataFactory.kill_you(),
     ],
 )

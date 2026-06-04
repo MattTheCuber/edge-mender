@@ -107,12 +107,7 @@ class MeshGenerator:
         pv_data: pv.ImageData = pv.wrap(data)  # pyright: ignore[reportAssignmentType]
         mesh = pv_data.contour_labels(output_mesh_type="triangles", smoothing=False)
         faces = mesh.faces.reshape((mesh.n_cells, 4))[:, 1:]
-        mesh = trimesh.Trimesh(mesh.points, faces)
-        # NOTE: This shouldn't be needed after https://gitlab.kitware.com/vtk/vtk/-/issues/19156
-        mesh.fix_normals()
-        if mesh.volume < 0:
-            mesh.invert()
-        return mesh
+        return trimesh.Trimesh(mesh.points, faces)
 
     @staticmethod
     def to_mesh_dual_contouring(data: NDArray) -> trimesh.Trimesh:

@@ -1,7 +1,6 @@
 """Contains a class with a set of test case data sets."""
 
 import cc3d
-import fill_voids
 import numpy as np
 from numpy.typing import NDArray
 
@@ -262,6 +261,4 @@ class DataFactory:
         data = cc3d.largest_k(data, k=1, connectivity=6, binary_image=True).astype(
             np.uint8,
         )
-        data = fill_voids.fill(data, in_place=True)
-        data = fill_voids.fill(data, in_place=True)
         return np.pad(data, pad_width=1, mode="constant", constant_values=0)
